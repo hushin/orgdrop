@@ -25,6 +25,8 @@ function App() {
   const [currentFile, setCurrentFile] = useState<string>('example.org');
   const [agendaItems, setAgendaItems] = useState<AgendaItem[]>([]);
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   const loadFile = async (path: string) => {
     setLoading(true);
     try {
@@ -32,6 +34,7 @@ function App() {
       setFile(orgFile);
       setCurrentFile(path);
       setViewMode('file');
+      setIsSidebarOpen(false); // Close sidebar on selection (mobile)
     } catch (e) {
       console.error(e);
     } finally {
@@ -45,6 +48,7 @@ function App() {
       const items = await getAgenda.execute();
       setAgendaItems(items);
       setViewMode('agenda');
+      setIsSidebarOpen(false); // Close sidebar on selection (mobile)
     } catch (e) {
       console.error(e);
     } finally {
@@ -65,33 +69,60 @@ function App() {
     }
   };
 
+  const SidebarContent = () => (
+    <div className="p-4 h-full bg-gray-800 text-white">
+      <h1 className="text-xl font-bold mb-6">OrgDrop</h1>
+      <nav className="space-y-2">
+        <button
+          onClick={() => loadFile('example.org')}
+          className={`w-full text-left px-4 py-2 rounded ${viewMode === 'file' ? 'bg-gray-700' : 'hover:bg-gray-700'}`}
+        >
+          Files
+        </button>
+        <button
+          onClick={loadAgenda}
+          className={`w-full text-left px-4 py-2 rounded ${viewMode === 'agenda' ? 'bg-gray-700' : 'hover:bg-gray-700'}`}
+        >
+          Agenda
+        </button>
+      </nav>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gray-100 flex">
+      {/* Desktop Sidebar */}
       <aside className="w-64 bg-gray-800 text-white flex-shrink-0 hidden md:block">
-        <div className="p-4">
-          <h1 className="text-xl font-bold mb-6">OrgDrop</h1>
-          <nav className="space-y-2">
-            <button
-              onClick={() => loadFile('example.org')}
-              className={`w-full text-left px-4 py-2 rounded ${viewMode === 'file' ? 'bg-gray-700' : 'hover:bg-gray-700'}`}
-            >
-              Files
-            </button>
-            <button
-              onClick={loadAgenda}
-              className={`w-full text-left px-4 py-2 rounded ${viewMode === 'agenda' ? 'bg-gray-700' : 'hover:bg-gray-700'}`}
-            >
-              Agenda
-            </button>
-          </nav>
-        </div>
+        <SidebarContent />
       </aside>
+
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div className="fixed inset-0 z-20 md:hidden">
+          <div className="absolute inset-0 bg-black opacity-50" onClick={() => setIsSidebarOpen(false)}></div>
+          <div className="absolute inset-y-0 left-0 w-64 bg-gray-800 z-30 shadow-xl transform transition-transform duration-300 ease-in-out">
+            <SidebarContent />
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 flex flex-col min-w-0">
         <header className="bg-white shadow p-4 mb-6 sticky top-0 z-10">
           <div className="max-w-4xl mx-auto w-full">
             <div className="flex justify-between items-center mb-4">
-              <div className="md:hidden font-bold text-gray-800">OrgDrop</div>
-              <span className="text-sm text-gray-500 truncate">{viewMode === 'file' ? currentFile : 'Agenda'}</span>
+              <div className="flex items-center">
+                {/* Hamburger Button */}
+                <button
+                  className="md:hidden mr-4 text-gray-600 focus:outline-none"
+                  onClick={() => setIsSidebarOpen(true)}
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+                <h1 className="text-xl font-bold text-gray-800 md:hidden">OrgDrop</h1>
+              </div>
+              <span className="text-sm text-gray-500 truncate hidden md:block">{viewMode === 'file' ? currentFile : 'Agenda'}</span>
             </div>
             <SearchBox onSearch={handleSearch} />
           </div>
