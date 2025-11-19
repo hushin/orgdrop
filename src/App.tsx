@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { OrgViewer } from './ui/OrgViewer';
 import { SearchBox, SearchResults } from './ui/Search';
 import { AgendaView } from './ui/AgendaView';
-import { MockFileRepository } from './repository/MockFileRepository';
+import { RemoteFileRepository } from './repository/RemoteFileRepository';
 import { GetOrgFileUseCase } from './usecase/GetOrgFile';
 import { SearchFilesUseCase } from './usecase/SearchFiles';
 import { GetAgendaUseCase } from './usecase/GetAgenda';
@@ -10,7 +10,8 @@ import type { OrgFile } from './domain/org/ast';
 import type { SearchResult } from './domain/search/SearchResult';
 import type { AgendaItem } from './domain/agenda/AgendaItem';
 
-const repository = new MockFileRepository();
+// const repository = new MockFileRepository();
+const repository = new RemoteFileRepository('http://localhost:8787');
 const getOrgFile = new GetOrgFileUseCase(repository);
 const searchFiles = new SearchFilesUseCase(repository);
 const getAgenda = new GetAgendaUseCase(repository);
