@@ -3,7 +3,11 @@ import type { AgendaItem } from '../domain/agenda/AgendaItem';
 import type { OrgHeadingNode } from '../domain/org/ast';
 
 export class GetAgendaUseCase {
-    constructor(private fileRepository: FileRepository) { }
+    private fileRepository: FileRepository;
+
+    constructor(fileRepository: FileRepository) {
+        this.fileRepository = fileRepository;
+    }
 
     async execute(): Promise<AgendaItem[]> {
         const files = await this.fileRepository.getFiles();

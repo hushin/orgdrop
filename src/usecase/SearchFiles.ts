@@ -2,7 +2,11 @@ import type { FileRepository } from '../repository/FileRepository';
 import type { SearchResult } from '../domain/search/SearchResult';
 
 export class SearchFilesUseCase {
-    constructor(private fileRepository: FileRepository) { }
+    private fileRepository: FileRepository;
+
+    constructor(fileRepository: FileRepository) {
+        this.fileRepository = fileRepository;
+    }
 
     async execute(query: string): Promise<SearchResult[]> {
         if (!query.trim()) {
