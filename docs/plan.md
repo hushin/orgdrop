@@ -2,41 +2,7 @@
 
 このドキュメントは、OrgDrop プロジェクトの残タスクと今後の開発方針をまとめたものです。
 
-## 完了済み機能
-
-### ✅ 基本機能
-- Vite + React + TypeScript プロジェクトのセットアップ
-- Tailwind CSS の導入
-- Org-mode パーサーの実装（見出し、リスト、TODO、リンク、画像）
-- Clean Architecture の採用（Domain, UseCase, Repository, UI レイヤー）
-- MockFileRepository（ローカルダミーデータ）
-
-### ✅ UI/UX
-- サイドバー + メインコンテンツのレイアウト
-- レスポンシブデザイン（モバイル対応）
-- ハンバーガーメニュー
-
-### ✅ 機能実装
-- ファイルブラウザ / ビューア
-- 検索機能（全文検索、行番号表示）
-- Org Agenda ビュー（TODO タスク一覧）
-- 画像レンダリング
-
-### ✅ Dropbox 連携
-- Cloudflare Workers プロジェクトのセットアップ
-- Dropbox OAuth フローの実装
-- Dropbox API クライアントの実装
-  - ファイル一覧取得（再帰的、ページネーション対応）
-  - ファイルダウンロード
-  - ファイル検索
-- `DROPBOX_ROOT_PATH` によるフォルダ指定
-- 隠しファイル（`.#gtd.org` など）の除外
-- RemoteFileRepository の実装とフロントエンドへの統合
-
----
-
 ## 残タスク
-
 
 ### 📝 Org-mode パーサーの拡張
 - [ ] テーブルのパース
@@ -108,9 +74,7 @@
 - [ ] CI/CD パイプラインの構築
 
 ### 📚 ドキュメント
-- [ ] README の充実（セットアップ手順、使い方）
 - [ ] Dropbox App の作成手順（`docs/dropbox_setup.md` は作成済み）
-- [ ] アーキテクチャドキュメント
 - [ ] コントリビューションガイド
 
 ---

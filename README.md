@@ -1,73 +1,88 @@
-# React + TypeScript + Vite
+# OrgDrop
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+OrgDrop is a modern, web-based Org-mode viewer that seamlessly integrates with Dropbox. It allows you to access, search, and manage your Org files from anywhere, with a clean and responsive UI.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### ✅ Core Functionality
+-   **Org-mode Parsing**: Supports headings, lists, TODOs, links, and images.
+-   **Dropbox Integration**: Securely connects to your Dropbox to fetch and display Org files.
+-   **Responsive Design**: Optimized for both desktop and mobile devices.
+-   **Clean Architecture**: Built with maintainability and scalability in mind.
 
-## React Compiler
+### ✅ Key Capabilities
+-   **File Browser**: Navigate your Dropbox folder structure to find Org files.
+-   **Org Agenda**: View all your TODO tasks in a consolidated list.
+-   **Search**: Full-text search across your Org files with line number indication.
+-   **Image Rendering**: Displays images referenced in your Org files (supports Dropbox-hosted images).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Tech Stack
 
-## Expanding the ESLint configuration
+-   **Frontend**: React, Vite, TypeScript
+-   **Styling**: Tailwind CSS
+-   **Backend**: Cloudflare Workers (for Dropbox API proxying)
+-   **Testing**: Vitest
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Getting Started
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Prerequisites
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+-   Node.js (v18 or later recommended)
+-   A Dropbox account and a Dropbox App (for API credentials)
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+### Installation
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+1.  Clone the repository:
+    ```bash
+    git clone https://github.com/hushin-sandbox/orgdrop.git
+    cd orgdrop
+    ```
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+2.  Install frontend dependencies:
+    ```bash
+    npm install
+    ```
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+3.  Install backend dependencies:
+    ```bash
+    cd worker
+    npm install
+    ```
+
+### Configuration
+
+1.  **Backend (Cloudflare Worker)**:
+    -   Create a `.dev.vars` file in the `worker/` directory.
+    -   Add your Dropbox App credentials:
+        ```
+        DROPBOX_CLIENT_ID=your_client_id
+        DROPBOX_CLIENT_SECRET=your_client_secret
+        DROPBOX_REFRESH_TOKEN=your_refresh_token
+        ```
+
+2.  **Frontend**:
+    -   No specific environment variables are required for local development, as it connects to the local worker instance or uses mock data depending on configuration.
+
+### Running the App
+
+1.  Start the Backend (Worker):
+    ```bash
+    cd worker
+    npm run dev
+    ```
+
+2.  Start the Frontend (in a separate terminal):
+    ```bash
+    # from the root directory
+    npm run dev
+    ```
+
+3.  Open your browser at `http://localhost:5173`.
+
+## Roadmap
+
+See [docs/plan.md](docs/plan.md) for the detailed development roadmap and remaining tasks.
+
+## License
+
+[MIT](LICENSE)
