@@ -107,4 +107,22 @@ export class DropboxClient {
             name: match.metadata.metadata.name
         }));
     }
+    async getTemporaryLink(path: string): Promise<string> {
+        const response = await fetch('https://api.dropboxapi.com/2/files/get_temporary_link', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${this.accessToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ path }),
+        });
+
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(`Dropbox get_temporary_link failed: ${error}`);
+        }
+
+        const data = await response.json() as any;
+        return data.link;
+    }
 }

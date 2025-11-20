@@ -3,6 +3,12 @@ import { cors } from 'hono/cors';
 import { getCookie, setCookie } from 'hono/cookie';
 import { DropboxClient } from './dropbox';
 
+interface Env {
+    DROPBOX_APP_KEY: string;
+    DROPBOX_APP_SECRET: string;
+    DROPBOX_ROOT_PATH: string;
+}
+
 const app = new Hono<{ Bindings: Env }>();
 
 app.use('/*', cors({
@@ -100,6 +106,23 @@ app.get('/api/search', async (c) => {
         return c.json(results.filter(r => r !== null));
     } catch (e: any) {
         return c.text(e.message, 500);
+    }
+});
+
+app.get('/api/images/:path', async (c) => {
+    const token = getCookie(c, 'dropbox_token');
+    if (!token) {
+        return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const path = c.req.param('path');
+    try {
+        const client = new DropboxClient(token);
+        const dropboxPath = path.startsWith('/') ? path : `/${path}`;
+        const link = await client.getTemporaryLink(dropboxPath);
+        return c.redirect(link);
+    } catch (e: any) {
+        return c.text(e.message, 404);
     }
 });
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { OrgViewer } from './ui/OrgViewer';
 import { SearchBox, SearchResults } from './ui/Search';
 import { AgendaView } from './ui/AgendaView';
+import { Sidebar } from './ui/Sidebar';
 import { RemoteFileRepository } from './repository/RemoteFileRepository';
 import { GetOrgFileUseCase } from './usecase/GetOrgFile';
 import { SearchFilesUseCase } from './usecase/SearchFiles';
@@ -101,40 +102,7 @@ function App() {
     }
   };
 
-  const SidebarContent = () => (
-    <div className="p-4 h-full bg-gray-800 text-white overflow-y-auto">
-      <h1 className="text-xl font-bold mb-6">OrgDrop</h1>
-      <nav className="space-y-2">
-        <div className="mb-4">
-          <h2 className="text-xs uppercase text-gray-400 font-semibold mb-2">Views</h2>
-          <button
-            onClick={loadAgenda}
-            className={`w-full text-left px-4 py-2 rounded ${viewMode === 'agenda' ? 'bg-gray-700' : 'hover:bg-gray-700'}`}
-          >
-            Agenda
-          </button>
-        </div>
 
-        <div>
-          <h2 className="text-xs uppercase text-gray-400 font-semibold mb-2">Files</h2>
-          {files.length === 0 ? (
-            <div className="px-4 text-sm text-gray-500">No files found</div>
-          ) : (
-            files.map((filePath) => (
-              <button
-                key={filePath}
-                onClick={() => loadFile(filePath)}
-                className={`w-full text-left px-4 py-2 rounded truncate ${currentFile === filePath && viewMode === 'file' ? 'bg-gray-700' : 'hover:bg-gray-700'}`}
-                title={filePath}
-              >
-                {filePath.split('/').pop()}
-              </button>
-            ))
-          )}
-        </div>
-      </nav>
-    </div>
-  );
 
   if (!isAuthenticated) {
     return (
@@ -157,7 +125,13 @@ function App() {
     <div className="h-screen bg-gray-100 flex overflow-hidden">
       {/* Desktop Sidebar */}
       <aside className="w-64 bg-gray-800 text-white flex-shrink-0 hidden md:block overflow-y-auto">
-        <SidebarContent />
+        <Sidebar
+          files={files}
+          onFileSelect={loadFile}
+          currentFile={currentFile}
+          viewMode={viewMode}
+          onAgendaSelect={loadAgenda}
+        />
       </aside>
 
       {/* Mobile Sidebar Overlay */}
@@ -165,7 +139,13 @@ function App() {
         <div className="fixed inset-0 z-20 md:hidden">
           <div className="absolute inset-0 bg-black opacity-50" onClick={() => setIsSidebarOpen(false)}></div>
           <div className="absolute inset-y-0 left-0 w-64 bg-gray-800 z-30 shadow-xl transform transition-transform duration-300 ease-in-out overflow-y-auto">
-            <SidebarContent />
+            <Sidebar
+              files={files}
+              onFileSelect={loadFile}
+              currentFile={currentFile}
+              viewMode={viewMode}
+              onAgendaSelect={loadAgenda}
+            />
           </div>
         </div>
       )}
@@ -208,7 +188,41 @@ function App() {
             ) : viewMode === 'agenda' ? (
               <AgendaView items={agendaItems} onItemClick={loadFile} />
             ) : file ? (
-              <OrgViewer file={file} />
+              <OrgViewer
+                file={file}
+                resolveImage={(src) => {
+                  // If it's already an absolute URL, return as is
+                  if (src.startsWith('http')) return src;
+                  // Otherwise, construct the API URL
+                  // Note: src might be relative like "images/foo.png" or absolute like "/images/foo.png"
+                  // The worker expects the path as it is in Dropbox
+                  // If the file is in a subdirectory, we might need to handle relative paths from the current file?
+                  // For now, let's assume src is relative to the Dropbox root or absolute path in Dropbox.
+                  // Actually, Org mode links are usually relative to the file.
+                  // But we don't have the current file's directory easily accessible here without parsing the path.
+                  // Let's assume the user puts images in a fixed place or uses absolute paths for now, 
+                  // or that the worker handles the path finding.
+                  // But wait, the worker just takes the path.
+                  // If I am in "projects/todo.org" and link is "[[file:../images/logo.png]]", 
+                  // I need to resolve that path.
+                  // For MVP, let's just pass the path to the worker and let the worker/Dropbox handle it 
+                  // (Dropbox API takes paths relative to root if they start with / or relative to... wait, API takes full path).
+
+                  // Let's try to resolve relative to current file if possible.
+                  let imagePath = src;
+                  if (!src.startsWith('/') && currentFile) {
+                    const currentDir = currentFile.substring(0, currentFile.lastIndexOf('/'));
+                    if (currentDir) {
+                      // Simple path join (handling .. is harder without a library, but let's try basic)
+                      // For now, just pass it through. The user can use absolute paths in Org for reliability.
+                      // Or we can implement a simple join.
+                      imagePath = `${currentDir}/${src}`;
+                    }
+                  }
+
+                  return `http://localhost:8787/api/images/${encodeURIComponent(imagePath)}`;
+                }}
+              />
             ) : (
               <div className="flex items-center justify-center py-12">Failed to load file</div>
             )}

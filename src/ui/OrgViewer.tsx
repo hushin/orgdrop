@@ -3,32 +3,33 @@ import type { OrgFile, OrgNode, OrgHeadingNode, OrgListNode, OrgListItemNode, Or
 
 interface OrgViewerProps {
     file: OrgFile;
+    resolveImage?: (src: string) => string;
 }
 
-export const OrgViewer: React.FC<OrgViewerProps> = ({ file }) => {
+export const OrgViewer: React.FC<OrgViewerProps> = ({ file, resolveImage }) => {
     return (
         <div className="max-w-4xl mx-auto p-6 bg-white shadow-sm min-h-screen">
             {file.nodes.map((node, index) => (
-                <NodeRenderer key={index} node={node} />
+                <NodeRenderer key={index} node={node} resolveImage={resolveImage} />
             ))}
         </div>
     );
 };
 
-const NodeRenderer: React.FC<{ node: OrgNode }> = ({ node }) => {
+const NodeRenderer: React.FC<{ node: OrgNode; resolveImage?: (src: string) => string }> = ({ node, resolveImage }) => {
     switch (node.type) {
         case 'heading':
-            return <HeadingRenderer node={node as OrgHeadingNode} />;
+            return <HeadingRenderer node={node as OrgHeadingNode} resolveImage={resolveImage} />;
         case 'paragraph':
-            return <p className="mb-4 text-gray-800 leading-relaxed"><InlineRenderer nodes={node.children || []} /></p>;
+            return <p className="mb-4 text-gray-800 leading-relaxed"><InlineRenderer nodes={node.children || []} resolveImage={resolveImage} /></p>;
         case 'list':
-            return <ListRenderer node={node as OrgListNode} />;
+            return <ListRenderer node={node as OrgListNode} resolveImage={resolveImage} />;
         default:
             return null;
     }
 };
 
-const HeadingRenderer: React.FC<{ node: OrgHeadingNode }> = ({ node }) => {
+const HeadingRenderer: React.FC<{ node: OrgHeadingNode; resolveImage?: (src: string) => string }> = ({ node, resolveImage }) => {
     const Tag = `h${Math.min(node.level, 6)}` as React.ElementType;
     const sizeClasses = {
         1: 'text-3xl border-b pb-2 mt-8 mb-4',
@@ -50,7 +51,7 @@ const HeadingRenderer: React.FC<{ node: OrgHeadingNode }> = ({ node }) => {
                 </span>
             )}
             {node.priority && <span className="mr-2 text-yellow-600 font-mono">[#{node.priority}]</span>}
-            {node.title}
+            <InlineRenderer nodes={node.children || []} resolveImage={resolveImage} />
             {node.tags && node.tags.length > 0 && (
                 <span className="ml-4 text-sm text-gray-500 font-normal">
                     {node.tags.map(tag => `:${tag}:`).join('')}
@@ -60,29 +61,29 @@ const HeadingRenderer: React.FC<{ node: OrgHeadingNode }> = ({ node }) => {
     );
 };
 
-const ListRenderer: React.FC<{ node: OrgListNode }> = ({ node }) => {
+const ListRenderer: React.FC<{ node: OrgListNode; resolveImage?: (src: string) => string }> = ({ node, resolveImage }) => {
     const Tag = node.ordered ? 'ol' : 'ul';
     return (
         <Tag className={`mb-4 pl-6 ${node.ordered ? 'list-decimal' : 'list-disc'}`}>
             {node.children?.map((child, index) => (
-                <ListItemRenderer key={index} node={child as OrgListItemNode} />
+                <ListItemRenderer key={index} node={child as OrgListItemNode} resolveImage={resolveImage} />
             ))}
         </Tag>
     );
 };
 
-const ListItemRenderer: React.FC<{ node: OrgListItemNode }> = ({ node }) => {
+const ListItemRenderer: React.FC<{ node: OrgListItemNode; resolveImage?: (src: string) => string }> = ({ node, resolveImage }) => {
     return (
         <li className="mb-1">
             {node.checked !== undefined && (
                 <input type="checkbox" checked={node.checked} readOnly className="mr-2" />
             )}
-            <InlineRenderer nodes={node.children || []} />
+            <InlineRenderer nodes={node.children || []} resolveImage={resolveImage} />
         </li>
     );
 };
 
-const InlineRenderer: React.FC<{ nodes: OrgNode[] }> = ({ nodes }) => {
+const InlineRenderer: React.FC<{ nodes: OrgNode[]; resolveImage?: (src: string) => string }> = ({ nodes, resolveImage }) => {
     return (
         <>
             {nodes.map((node, index) => {
@@ -93,7 +94,8 @@ const InlineRenderer: React.FC<{ nodes: OrgNode[] }> = ({ nodes }) => {
                 }
                 if (node.type === 'image') {
                     const imgNode = node as OrgImageNode;
-                    return <img key={index} src={imgNode.src} alt={imgNode.alt} className="max-w-full h-auto my-2 rounded shadow" />;
+                    const src = resolveImage ? resolveImage(imgNode.src) : imgNode.src;
+                    return <img key={index} src={src} alt={imgNode.alt} className="max-w-full h-auto my-2 rounded shadow" />;
                 }
                 return null;
             })}
