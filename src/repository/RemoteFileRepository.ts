@@ -13,7 +13,12 @@ export class RemoteFileRepository implements FileRepository {
     }
 
     async getFiles(): Promise<string[]> {
-        const response = await fetch(`${this.baseUrl}/api/files`);
+        const response = await fetch(`${this.baseUrl}/api/files`, {
+            credentials: 'include'
+        });
+        if (response.status === 401) {
+            throw new Error('Unauthorized');
+        }
         if (!response.ok) {
             throw new Error('Failed to fetch file list');
         }
@@ -21,7 +26,12 @@ export class RemoteFileRepository implements FileRepository {
     }
 
     async readFile(path: string): Promise<OrgFile> {
-        const response = await fetch(`${this.baseUrl}/api/files/${encodeURIComponent(path)}`);
+        const response = await fetch(`${this.baseUrl}/api/files/${encodeURIComponent(path)}`, {
+            credentials: 'include'
+        });
+        if (response.status === 401) {
+            throw new Error('Unauthorized');
+        }
         if (!response.ok) {
             throw new Error(`Failed to read file: ${path}`);
         }
@@ -30,7 +40,12 @@ export class RemoteFileRepository implements FileRepository {
     }
 
     async search(query: string): Promise<SearchResult[]> {
-        const response = await fetch(`${this.baseUrl}/api/search?q=${encodeURIComponent(query)}`);
+        const response = await fetch(`${this.baseUrl}/api/search?q=${encodeURIComponent(query)}`, {
+            credentials: 'include'
+        });
+        if (response.status === 401) {
+            throw new Error('Unauthorized');
+        }
         if (!response.ok) {
             throw new Error('Failed to search');
         }

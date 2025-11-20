@@ -1,77 +1,105 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { getCookie, setCookie } from 'hono/cookie';
+import { DropboxClient } from './dropbox';
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.use('/*', cors());
-
-const DUMMY_FILES: Record<string, string> = {
-    'example.org': `
-* TODO Welcome to OrgDrop (Remote)
-** NEXT Features to implement
-- [X] Org Parser
-- [ ] File Repository
-- [ ] UI Components
-** [#A] Important Links
-- [[https://github.com][GitHub]]
-- [[https://google.com][Google]]
-
-* Images
-[[file:example.png]]
-`,
-    'todo.org': `
-* Work
-** TODO Finish report
-** WAITING Email reply
-* Personal
-** TODO Buy milk
-`
-};
+app.use('/*', cors({
+    origin: 'http://localhost:5173', // Allow frontend
+    credentials: true, // Allow cookies
+}));
 
 app.get('/', (c) => {
     return c.text('OrgDrop Worker is running!');
 });
 
-app.get('/api/files', (c) => {
-    return c.json(Object.keys(DUMMY_FILES));
+app.get('/api/files', async (c) => {
+    const token = getCookie(c, 'dropbox_token');
+    if (!token) {
+        return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    try {
+        const client = new DropboxClient(token);
+        const files = await client.listFiles();
+        return c.json(files);
+    } catch (e: any) {
+        return c.text(e.message, 500);
+    }
 });
 
-app.get('/api/files/:path', (c) => {
+app.get('/api/files/:path', async (c) => {
+    const token = getCookie(c, 'dropbox_token');
+    if (!token) {
+        return c.json({ error: 'Unauthorized' }, 401);
+    }
+
     const path = c.req.param('path');
-    const content = DUMMY_FILES[path];
-    if (!content) {
-        return c.text('File not found', 404);
+    try {
+        const client = new DropboxClient(token);
+        // Dropbox paths usually start with /, ensure it does
+        const dropboxPath = path.startsWith('/') ? path : `/${path}`;
+        const content = await client.downloadFile(dropboxPath);
+        return c.text(content);
+    } catch (e: any) {
+        return c.text(e.message, 404);
     }
-    return c.text(content);
 });
 
-app.get('/api/search', (c) => {
-    const query = c.req.query('q')?.toLowerCase() || '';
-    const results: any[] = [];
-
-    for (const [path, content] of Object.entries(DUMMY_FILES)) {
-        const lines = content.split(/\r?\n/);
-        const matches = lines
-            .map((line, index) => ({ line, index }))
-            .filter(({ line }) => line.toLowerCase().includes(query))
-            .map(({ line, index }) => ({
-                lineNumber: index + 1,
-                lineContent: line.trim()
-            }));
-
-        if (matches.length > 0) {
-            results.push({
-                filePath: path,
-                matches
-            });
-        }
+app.get('/api/search', async (c) => {
+    const token = getCookie(c, 'dropbox_token');
+    if (!token) {
+        return c.json({ error: 'Unauthorized' }, 401);
     }
-    return c.json(results);
+
+    const query = c.req.query('q')?.toLowerCase() || '';
+    if (!query) return c.json([]);
+
+    try {
+        const client = new DropboxClient(token);
+        // 1. Search using Dropbox API to find relevant files
+        const searchMatches = await client.searchFiles(query);
+
+        // 2. Download content of matched files to find specific lines (naive implementation)
+        // Limit to top 5 files to avoid timeout
+        const topMatches = searchMatches.slice(0, 5);
+
+        const results = await Promise.all(topMatches.map(async (match: any) => {
+            try {
+                const content = await client.downloadFile(match.path);
+                const lines = content.split(/\r?\n/);
+                const lineMatches = lines
+                    .map((line, index) => ({ line, index }))
+                    .filter(({ line }) => line.toLowerCase().includes(query))
+                    .map(({ line, index }) => ({
+                        lineNumber: index + 1,
+                        lineContent: line.trim()
+                    }));
+
+                if (lineMatches.length > 0) {
+                    return {
+                        filePath: match.path, // Use full path
+                        matches: lineMatches
+                    };
+                }
+                return null;
+            } catch (e) {
+                console.error(`Failed to search in file ${match.path}`, e);
+                return null;
+            }
+        }));
+
+        return c.json(results.filter(r => r !== null));
+    } catch (e: any) {
+        return c.text(e.message, 500);
+    }
 });
 
 app.get('/auth/dropbox', (c) => {
     const clientId = c.env.DROPBOX_APP_KEY;
-    const redirectUri = 'http://localhost:5173/auth/callback'; // TODO: Make dynamic
+    // Use the worker's URL for callback
+    const redirectUri = 'http://localhost:8787/auth/callback';
     const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}`;
 
     return c.redirect(authUrl);
@@ -82,8 +110,47 @@ app.get('/auth/callback', async (c) => {
     if (!code) {
         return c.text('Missing code', 400);
     }
-    // TODO: Exchange code for token
-    return c.json({ message: 'Auth successful (placeholder)', code });
+
+    const clientId = c.env.DROPBOX_APP_KEY;
+    const clientSecret = c.env.DROPBOX_APP_SECRET;
+    const redirectUri = 'http://localhost:8787/auth/callback';
+
+    try {
+        const response = await fetch('https://api.dropboxapi.com/oauth2/token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                code,
+                grant_type: 'authorization_code',
+                client_id: clientId,
+                client_secret: clientSecret,
+                redirect_uri: redirectUri,
+            }),
+        });
+
+        if (!response.ok) {
+            const error = await response.text();
+            return c.text(`Dropbox Auth Failed: ${error}`, 400);
+        }
+
+        const data = await response.json() as { access_token: string, uid: string };
+
+        // Set HttpOnly cookie
+        setCookie(c, 'dropbox_token', data.access_token, {
+            httpOnly: true,
+            secure: true, // Requires HTTPS (might fail on localhost if not careful, but usually fine on modern browsers/localhost)
+            sameSite: 'Lax',
+            path: '/',
+            maxAge: 3600 * 4, // 4 hours
+        });
+
+        // Redirect back to frontend
+        return c.redirect('http://localhost:5173/');
+    } catch (e) {
+        return c.text(`Auth Error: ${e}`, 500);
+    }
 });
 
 export default app;

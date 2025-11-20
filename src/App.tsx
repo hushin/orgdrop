@@ -27,6 +27,14 @@ function App() {
   const [agendaItems, setAgendaItems] = useState<AgendaItem[]>([]);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(true); // Assume true initially
+
+  const handleAuthError = (e: any) => {
+    console.error(e);
+    if (e.message === 'Unauthorized') {
+      setIsAuthenticated(false);
+    }
+  };
 
   const loadFile = async (path: string) => {
     setLoading(true);
@@ -36,8 +44,9 @@ function App() {
       setCurrentFile(path);
       setViewMode('file');
       setIsSidebarOpen(false); // Close sidebar on selection (mobile)
+      setIsAuthenticated(true);
     } catch (e) {
-      console.error(e);
+      handleAuthError(e);
     } finally {
       setLoading(false);
     }
@@ -50,8 +59,9 @@ function App() {
       setAgendaItems(items);
       setViewMode('agenda');
       setIsSidebarOpen(false); // Close sidebar on selection (mobile)
+      setIsAuthenticated(true);
     } catch (e) {
-      console.error(e);
+      handleAuthError(e);
     } finally {
       setLoading(false);
     }
@@ -65,8 +75,9 @@ function App() {
     try {
       const results = await searchFiles.execute(query);
       setSearchResults(results);
+      setIsAuthenticated(true);
     } catch (e) {
-      console.error(e);
+      handleAuthError(e);
     }
   };
 
@@ -89,6 +100,23 @@ function App() {
       </nav>
     </div>
   );
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="bg-white p-8 rounded shadow-md text-center">
+          <h1 className="text-2xl font-bold mb-4">Welcome to OrgDrop</h1>
+          <p className="mb-6 text-gray-600">Please login with Dropbox to continue.</p>
+          <a
+            href="http://localhost:8787/auth/dropbox"
+            className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors"
+          >
+            Login with Dropbox
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
