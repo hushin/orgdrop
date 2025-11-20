@@ -29,6 +29,8 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(true); // Assume true initially
 
+  const [files, setFiles] = useState<string[]>([]);
+
   const handleAuthError = (e: any) => {
     console.error(e);
     if (e.message === 'Unauthorized') {
@@ -68,7 +70,25 @@ function App() {
   };
 
   useEffect(() => {
-    loadFile('example.org');
+    const init = async () => {
+      setLoading(true);
+      try {
+        const fileList = await repository.getFiles();
+        setFiles(fileList);
+        if (fileList.length > 0) {
+          // Use the first file found
+          const firstFile = fileList[0];
+          await loadFile(firstFile);
+        } else {
+          setLoading(false);
+        }
+        setIsAuthenticated(true);
+      } catch (e: any) {
+        handleAuthError(e);
+        setLoading(false);
+      }
+    };
+    init();
   }, []);
 
   const handleSearch = async (query: string) => {
@@ -82,21 +102,36 @@ function App() {
   };
 
   const SidebarContent = () => (
-    <div className="p-4 h-full bg-gray-800 text-white">
+    <div className="p-4 h-full bg-gray-800 text-white overflow-y-auto">
       <h1 className="text-xl font-bold mb-6">OrgDrop</h1>
       <nav className="space-y-2">
-        <button
-          onClick={() => loadFile('example.org')}
-          className={`w-full text-left px-4 py-2 rounded ${viewMode === 'file' ? 'bg-gray-700' : 'hover:bg-gray-700'}`}
-        >
-          Files
-        </button>
-        <button
-          onClick={loadAgenda}
-          className={`w-full text-left px-4 py-2 rounded ${viewMode === 'agenda' ? 'bg-gray-700' : 'hover:bg-gray-700'}`}
-        >
-          Agenda
-        </button>
+        <div className="mb-4">
+          <h2 className="text-xs uppercase text-gray-400 font-semibold mb-2">Views</h2>
+          <button
+            onClick={loadAgenda}
+            className={`w-full text-left px-4 py-2 rounded ${viewMode === 'agenda' ? 'bg-gray-700' : 'hover:bg-gray-700'}`}
+          >
+            Agenda
+          </button>
+        </div>
+
+        <div>
+          <h2 className="text-xs uppercase text-gray-400 font-semibold mb-2">Files</h2>
+          {files.length === 0 ? (
+            <div className="px-4 text-sm text-gray-500">No files found</div>
+          ) : (
+            files.map((filePath) => (
+              <button
+                key={filePath}
+                onClick={() => loadFile(filePath)}
+                className={`w-full text-left px-4 py-2 rounded truncate ${currentFile === filePath && viewMode === 'file' ? 'bg-gray-700' : 'hover:bg-gray-700'}`}
+                title={filePath}
+              >
+                {filePath.split('/').pop()}
+              </button>
+            ))
+          )}
+        </div>
       </nav>
     </div>
   );

@@ -20,9 +20,11 @@ app.get('/api/files', async (c) => {
         return c.json({ error: 'Unauthorized' }, 401);
     }
 
+    const rootPath = c.env.DROPBOX_ROOT_PATH || '';
+
     try {
         const client = new DropboxClient(token);
-        const files = await client.listFiles();
+        const files = await client.listFiles(rootPath === '/' ? '' : rootPath);
         return c.json(files);
     } catch (e: any) {
         return c.text(e.message, 500);
@@ -39,6 +41,9 @@ app.get('/api/files/:path', async (c) => {
     try {
         const client = new DropboxClient(token);
         // Dropbox paths usually start with /, ensure it does
+        // If path is absolute (starts with /), use it as is.
+        // If we are using a root path, the file list returns full paths, so we should expect full paths here too.
+        // The frontend should pass the full path it got from listFiles.
         const dropboxPath = path.startsWith('/') ? path : `/${path}`;
         const content = await client.downloadFile(dropboxPath);
         return c.text(content);
@@ -56,10 +61,12 @@ app.get('/api/search', async (c) => {
     const query = c.req.query('q')?.toLowerCase() || '';
     if (!query) return c.json([]);
 
+    const rootPath = c.env.DROPBOX_ROOT_PATH || '';
+
     try {
         const client = new DropboxClient(token);
         // 1. Search using Dropbox API to find relevant files
-        const searchMatches = await client.searchFiles(query);
+        const searchMatches = await client.searchFiles(query, rootPath === '/' ? '' : rootPath);
 
         // 2. Download content of matched files to find specific lines (naive implementation)
         // Limit to top 5 files to avoid timeout

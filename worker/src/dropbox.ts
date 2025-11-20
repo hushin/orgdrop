@@ -6,33 +6,60 @@ export class DropboxClient {
     }
 
     async listFiles(path: string = ''): Promise<string[]> {
-        const response = await fetch('https://api.dropboxapi.com/2/files/list_folder', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.accessToken}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                path: path,
-                recursive: true,
-                include_media_info: false,
-                include_deleted: false,
-                include_has_explicit_shared_members: false,
-                include_mounted_folders: true,
-                limit: 1000
-            }),
-        });
+        let allEntries: any[] = [];
+        let hasMore = true;
+        let cursor: string | null = null;
 
-        if (!response.ok) {
-            const error = await response.text();
-            throw new Error(`Dropbox list_folder failed: ${error}`);
+        while (hasMore) {
+            const url = cursor
+                ? 'https://api.dropboxapi.com/2/files/list_folder/continue'
+                : 'https://api.dropboxapi.com/2/files/list_folder';
+
+            const body = cursor
+                ? JSON.stringify({ cursor })
+                : JSON.stringify({
+                    path: path,
+                    recursive: true,
+                    include_media_info: false,
+                    include_deleted: false,
+                    include_has_explicit_shared_members: false,
+                    include_mounted_folders: true,
+                    limit: 2000 // Max limit
+                });
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: body,
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`Dropbox list_folder failed: ${error}`);
+            }
+
+            const data = await response.json() as any;
+
+            allEntries = allEntries.concat(data.entries);
+            hasMore = data.has_more;
+            cursor = data.cursor;
         }
 
-        const data = await response.json() as any;
-        // Filter for .org files
-        return data.entries
-            .filter((entry: any) => entry['.tag'] === 'file' && entry.name.endsWith('.org'))
+        // Filter for .org files and exclude hidden/lock files
+        const files = allEntries
+            .filter((entry: any) => {
+                const isFile = entry['.tag'] === 'file';
+                const isOrg = entry.name.endsWith('.org');
+                const isHidden = entry.name.startsWith('.'); // Exclude .#gtd.org etc.
+
+                return isFile && isOrg && !isHidden;
+            })
             .map((entry: any) => entry.path_display);
+
+        return files;
     }
 
     async downloadFile(path: string): Promise<string> {
@@ -52,7 +79,7 @@ export class DropboxClient {
         return await response.text();
     }
 
-    async searchFiles(query: string): Promise<any[]> {
+    async searchFiles(query: string, rootPath: string = ''): Promise<any[]> {
         const response = await fetch('https://api.dropboxapi.com/2/files/search_v2', {
             method: 'POST',
             headers: {
@@ -62,7 +89,7 @@ export class DropboxClient {
             body: JSON.stringify({
                 query: query,
                 options: {
-                    path: '',
+                    path: rootPath === '/' ? '' : rootPath, // Dropbox API expects empty string for root, or valid path
                     file_categories: ['document'],
                     filename_only: false
                 }
