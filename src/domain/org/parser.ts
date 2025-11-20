@@ -78,6 +78,28 @@ export class OrgParser {
 
             } else {
                 currentList = null; // Break list on non-list line
+
+                // Check for planning line (SCHEDULED/DEADLINE)
+                // It usually appears right after the heading, but we'll check if the last node is a heading.
+                // Example: SCHEDULED: <2023-10-27 Fri> DEADLINE: <2023-10-28 Sat>
+                const planningMatch = line.match(/(SCHEDULED|DEADLINE):\s*<([^>]+)>/);
+
+                if (planningMatch) {
+                    const lastNode = nodes[nodes.length - 1];
+                    if (lastNode && lastNode.type === 'heading') {
+                        const scheduledMatch = line.match(/SCHEDULED:\s*<([^>]+)>/);
+                        const deadlineMatch = line.match(/DEADLINE:\s*<([^>]+)>/);
+
+                        if (scheduledMatch) {
+                            (lastNode as OrgHeadingNode).scheduled = scheduledMatch[1];
+                        }
+                        if (deadlineMatch) {
+                            (lastNode as OrgHeadingNode).deadline = deadlineMatch[1];
+                        }
+                        continue; // Skip adding this line as a paragraph
+                    }
+                }
+
                 // Treat as paragraph/text for now if not empty
                 if (line.trim() !== '') {
                     nodes.push({

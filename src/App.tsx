@@ -154,9 +154,9 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
+    <div className="h-screen bg-gray-100 flex overflow-hidden">
       {/* Desktop Sidebar */}
-      <aside className="w-64 bg-gray-800 text-white flex-shrink-0 hidden md:block">
+      <aside className="w-64 bg-gray-800 text-white flex-shrink-0 hidden md:block overflow-y-auto">
         <SidebarContent />
       </aside>
 
@@ -164,14 +164,14 @@ function App() {
       {isSidebarOpen && (
         <div className="fixed inset-0 z-20 md:hidden">
           <div className="absolute inset-0 bg-black opacity-50" onClick={() => setIsSidebarOpen(false)}></div>
-          <div className="absolute inset-y-0 left-0 w-64 bg-gray-800 z-30 shadow-xl transform transition-transform duration-300 ease-in-out">
+          <div className="absolute inset-y-0 left-0 w-64 bg-gray-800 z-30 shadow-xl transform transition-transform duration-300 ease-in-out overflow-y-auto">
             <SidebarContent />
           </div>
         </div>
       )}
 
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="bg-white shadow p-4 mb-6 sticky top-0 z-10">
+      <div className="flex-1 flex flex-col min-w-0 h-full">
+        <header className="bg-white shadow p-4 mb-6 sticky top-0 z-10 flex-shrink-0">
           <div className="max-w-4xl mx-auto w-full">
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center">

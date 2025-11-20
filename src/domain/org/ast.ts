@@ -14,6 +14,8 @@ export interface OrgHeadingNode extends OrgNode {
     priority?: string;
     tags?: string[];
     title: string;
+    scheduled?: string;
+    deadline?: string;
 }
 
 export interface OrgListNode extends OrgNode {

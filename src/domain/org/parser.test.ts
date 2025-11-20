@@ -95,4 +95,12 @@ describe('OrgParser', () => {
         expect(paragraph.children![0].type).toBe('image');
         expect((paragraph.children![0] as any).src).toBe('file:image.png');
     });
+
+    it('should parse SCHEDULED and DEADLINE', () => {
+        const parser = new OrgParser();
+        const result = parser.parse('* Task\nSCHEDULED: <2023-10-27 Fri> DEADLINE: <2023-10-28 Sat>');
+        const node = result.nodes[0] as OrgHeadingNode;
+        expect(node.scheduled).toBe('2023-10-27 Fri');
+        expect(node.deadline).toBe('2023-10-28 Sat');
+    });
 });
