@@ -7,6 +7,7 @@ interface Env {
     DROPBOX_APP_KEY: string;
     DROPBOX_APP_SECRET: string;
     DROPBOX_ROOT_PATH: string;
+    DROPBOX_CACHE: KVNamespace;
 }
 
 const app = new Hono<{ Bindings: Env }>();
@@ -46,12 +47,39 @@ app.get('/api/files/:path', async (c) => {
     const path = c.req.param('path');
     try {
         const client = new DropboxClient(token);
-        // Dropbox paths usually start with /, ensure it does
-        // If path is absolute (starts with /), use it as is.
-        // If we are using a root path, the file list returns full paths, so we should expect full paths here too.
-        // The frontend should pass the full path it got from listFiles.
         const dropboxPath = path.startsWith('/') ? path : `/${path}`;
-        const content = await client.downloadFile(dropboxPath);
+
+        // Generate Cache Key
+        const tokenBuffer = new TextEncoder().encode(token);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', tokenBuffer);
+        const tokenHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+        const cacheKey = `${tokenHash}:${dropboxPath}`;
+
+        // 1. Check KV
+        const cached = await c.env.DROPBOX_CACHE.get(cacheKey, { type: 'json' }) as { rev: string, content: string } | null;
+
+        if (cached) {
+            // 2. Check Metadata with Dropbox
+            try {
+                const metadata = await client.getMetadata(dropboxPath);
+                if (metadata.rev === cached.rev) {
+                    console.log(`Cache Hit for ${dropboxPath}`);
+                    return c.text(cached.content);
+                }
+                console.log(`Cache Stale for ${dropboxPath} (cached: ${cached.rev}, current: ${metadata.rev})`);
+            } catch (e) {
+                // If getMetadata fails (e.g. file deleted), proceed to download (which will fail) or handle error
+                console.error('Metadata check failed', e);
+            }
+        }
+
+        // 3. Download & Cache
+        console.log(`Downloading ${dropboxPath}`);
+        const { content, rev } = await client.downloadFile(dropboxPath);
+
+        // Store in KV
+        await c.env.DROPBOX_CACHE.put(cacheKey, JSON.stringify({ rev, content }));
+
         return c.text(content);
     } catch (e: any) {
         return c.text(e.message, 404);
@@ -80,7 +108,7 @@ app.get('/api/search', async (c) => {
 
         const results = await Promise.all(topMatches.map(async (match: any) => {
             try {
-                const content = await client.downloadFile(match.path);
+                const { content } = await client.downloadFile(match.path);
                 const lines = content.split(/\r?\n/);
                 const lineMatches = lines
                     .map((line, index) => ({ line, index }))
@@ -123,14 +151,18 @@ app.get('/api/config', async (c) => {
 
         let config = { agendaPaths: ['*.org', 'areas/', 'projects/', 'resources/'] };
         try {
-            const content = await client.downloadFile(configPath);
+            const { content } = await client.downloadFile(configPath);
             const parsed = JSON.parse(content);
             if (parsed.agendaPaths) {
                 config = parsed;
             }
-        } catch (e) {
+        } catch (e: any) {
             // Config file not found or invalid, use default
-            console.log('Config file not found or invalid, using default', e);
+            if (e.message && e.message.includes('path/not_found')) {
+                console.log('Config file (orgdrop.json) not found, using default configuration.');
+            } else {
+                console.log('Config file invalid or other error, using default', e);
+            }
         }
 
         return c.json({

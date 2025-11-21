@@ -62,12 +62,12 @@ export class DropboxClient {
         return files;
     }
 
-    async downloadFile(path: string): Promise<string> {
+    async downloadFile(path: string): Promise<{ content: string; rev: string }> {
         const response = await fetch('https://content.dropboxapi.com/2/files/download', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${this.accessToken}`,
-                'Dropbox-API-Arg': JSON.stringify({ path }),
+                'Dropbox-API-Arg': JSON.stringify({ path }).replace(/[\u007f-\uffff]/g, (c) => '\\u' + ('0000' + c.charCodeAt(0).toString(16)).slice(-4)),
             },
         });
 
@@ -76,7 +76,38 @@ export class DropboxClient {
             throw new Error(`Dropbox download failed: ${error}`);
         }
 
-        return await response.text();
+        const resultHeader = response.headers.get('dropbox-api-result');
+        if (!resultHeader) {
+            throw new Error('Missing dropbox-api-result header');
+        }
+        const metadata = JSON.parse(resultHeader);
+        const content = await response.text();
+
+        return { content, rev: metadata.rev };
+    }
+
+    async getMetadata(path: string): Promise<{ rev: string }> {
+        const response = await fetch('https://api.dropboxapi.com/2/files/get_metadata', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${this.accessToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                path,
+                include_media_info: false,
+                include_deleted: false,
+                include_has_explicit_shared_members: false,
+            }),
+        });
+
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(`Dropbox get_metadata failed: ${error}`);
+        }
+
+        const data = await response.json() as any;
+        return { rev: data.rev };
     }
 
     async searchFiles(query: string, rootPath: string = ''): Promise<any[]> {
