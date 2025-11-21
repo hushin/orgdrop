@@ -16,7 +16,7 @@
 ### 📅 Agenda 機能の強化
 
 
-- [ ] org-agenda-files 相当のサポート
+- [x] org-agenda-files 相当のサポート (`orgdrop.json` で設定可能)
 
 ```
   (setq my-default-org-agenda-files

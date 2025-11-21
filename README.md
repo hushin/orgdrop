@@ -57,11 +57,24 @@ OrgDrop is a modern, web-based Org-mode viewer that seamlessly integrates with D
         ```
         DROPBOX_CLIENT_ID=your_client_id
         DROPBOX_CLIENT_SECRET=your_client_secret
-        DROPBOX_REFRESH_TOKEN=your_refresh_token
         ```
 
-2.  **Frontend**:
     -   No specific environment variables are required for local development, as it connects to the local worker instance or uses mock data depending on configuration.
+
+3.  **Agenda Configuration**:
+    -   To configure which files are included in the Agenda view (similar to `org-agenda-files`), create a file named `orgdrop.json` in the root of your Dropbox folder (or the folder specified by `DROPBOX_ROOT_PATH`).
+    -   **Example `orgdrop.json`**:
+        ```json
+        {
+          "agendaPaths": [
+            "todo.org",
+            "projects/",
+            "work/active.org"
+          ]
+        }
+        ```
+    -   **Files**: Specify the relative path to the file (e.g., `todo.org`).
+    -   **Directories**: Specify the directory path ending with `/` (e.g., `projects/`). All `.org` files within this directory (recursively) will be included.
 
 ### Running the App
 

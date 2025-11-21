@@ -109,6 +109,39 @@ app.get('/api/search', async (c) => {
     }
 });
 
+app.get('/api/config', async (c) => {
+    const token = getCookie(c, 'dropbox_token');
+    if (!token) {
+        return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const rootPath = c.env.DROPBOX_ROOT_PATH || '';
+
+    try {
+        const client = new DropboxClient(token);
+        const configPath = rootPath === '/' ? '/orgdrop.json' : `${rootPath}/orgdrop.json`;
+
+        let config = { agendaPaths: ['*.org', 'areas/', 'projects/', 'resources/'] };
+        try {
+            const content = await client.downloadFile(configPath);
+            const parsed = JSON.parse(content);
+            if (parsed.agendaPaths) {
+                config = parsed;
+            }
+        } catch (e) {
+            // Config file not found or invalid, use default
+            console.log('Config file not found or invalid, using default', e);
+        }
+
+        return c.json({
+            rootPath: rootPath === '/' ? '' : rootPath,
+            config
+        });
+    } catch (e: any) {
+        return c.text(e.message, 500);
+    }
+});
+
 app.get('/api/images/:path', async (c) => {
     const token = getCookie(c, 'dropbox_token');
     if (!token) {

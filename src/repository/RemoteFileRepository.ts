@@ -1,6 +1,7 @@
 import type { FileRepository } from './FileRepository';
 import type { OrgFile } from '../domain/org/ast';
 import type { SearchResult } from '../domain/search/SearchResult';
+import type { AppConfig } from '../domain/config/AppConfig';
 import { OrgParser } from '../domain/org/parser';
 
 export class RemoteFileRepository implements FileRepository {
@@ -48,6 +49,19 @@ export class RemoteFileRepository implements FileRepository {
         }
         if (!response.ok) {
             throw new Error('Failed to search');
+        }
+        return response.json();
+    }
+
+    async getConfig(): Promise<AppConfig> {
+        const response = await fetch(`${this.baseUrl}/api/config`, {
+            credentials: 'include'
+        });
+        if (response.status === 401) {
+            throw new Error('Unauthorized');
+        }
+        if (!response.ok) {
+            throw new Error('Failed to fetch config');
         }
         return response.json();
     }
