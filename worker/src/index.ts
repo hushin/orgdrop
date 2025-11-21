@@ -58,23 +58,35 @@ app.get('/api/files/:path', async (c) => {
         // 1. Check KV
         const cached = await c.env.DROPBOX_CACHE.get(cacheKey, { type: 'json' }) as { rev: string, content: string } | null;
 
-        if (cached) {
-            // 2. Check Metadata with Dropbox
+        // Background Revalidation Logic
+        const revalidate = async () => {
             try {
+                // Check Metadata with Dropbox
                 const metadata = await client.getMetadata(dropboxPath);
-                if (metadata.rev === cached.rev) {
-                    console.log(`Cache Hit for ${dropboxPath}`);
-                    return c.text(cached.content);
+
+                // If cache is missing or stale, update it
+                if (!cached || metadata.rev !== cached.rev) {
+                    console.log(`Cache Update Needed for ${dropboxPath} (cached: ${cached?.rev}, current: ${metadata.rev})`);
+                    const { content, rev } = await client.downloadFile(dropboxPath);
+                    await c.env.DROPBOX_CACHE.put(cacheKey, JSON.stringify({ rev, content }));
+                    console.log(`Cache Updated for ${dropboxPath}`);
+                } else {
+                    console.log(`Cache Fresh for ${dropboxPath}`);
                 }
-                console.log(`Cache Stale for ${dropboxPath} (cached: ${cached.rev}, current: ${metadata.rev})`);
             } catch (e) {
-                // If getMetadata fails (e.g. file deleted), proceed to download (which will fail) or handle error
-                console.error('Metadata check failed', e);
+                console.error('Background revalidation failed', e);
             }
+        };
+
+        if (cached) {
+            console.log(`Cache Hit (Stale-While-Revalidate) for ${dropboxPath}`);
+            // Return immediately
+            c.executionCtx.waitUntil(revalidate());
+            return c.text(cached.content);
         }
 
-        // 3. Download & Cache
-        console.log(`Downloading ${dropboxPath}`);
+        // 2. No Cache - Blocking Download
+        console.log(`Cache Miss - Downloading ${dropboxPath}`);
         const { content, rev } = await client.downloadFile(dropboxPath);
 
         // Store in KV
