@@ -1,32 +1,25 @@
 import { useState, useEffect, useMemo } from 'react';
-import type { OrgFile } from './domain/org/ast';
-import { OrgViewer } from './ui/OrgViewer';
-import { AgendaView } from './ui/AgendaView';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Sidebar } from './ui/Sidebar';
 import { RemoteFileRepository } from './repository/RemoteFileRepository';
-import { GetAgendaUseCase } from './usecase/GetAgenda';
 import { SearchBox, SearchResults } from './ui/Search';
 import { SearchFilesUseCase } from './usecase/SearchFiles';
-import type { AgendaItem } from './domain/agenda/AgendaItem';
 import type { SearchResult } from './domain/search/SearchResult';
-
-type ViewMode = 'file' | 'agenda';
+import { AgendaPage } from './pages/AgendaPage';
+import { FilePage } from './pages/FilePage';
 
 function App() {
   const [files, setFiles] = useState<string[]>([]);
-  const [currentFile, setCurrentFile] = useState<string>('');
-  const [parsedFile, setParsedFile] = useState<OrgFile | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('agenda');
-  const [agendaItems, setAgendaItems] = useState<AgendaItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const repository = useMemo(() => new RemoteFileRepository('http://localhost:8787'), []);
   const searchFiles = useMemo(() => new SearchFilesUseCase(repository), [repository]);
-  const getAgenda = useMemo(() => new GetAgendaUseCase(repository), [repository]);
-
 
   const handleAuthError = (e: any) => {
     console.error(e);
@@ -34,46 +27,11 @@ function App() {
     setIsLoading(false);
   };
 
-  const loadFile = async (path: string) => {
-    setIsLoading(true);
-    try {
-      const parsed = await repository.readFile(path);
-      setCurrentFile(path);
-      setParsedFile(parsed);
-      setViewMode('file');
-      setIsSidebarOpen(false); // Close sidebar on selection (mobile)
-      setIsAuthenticated(true);
-    } catch (e) {
-      handleAuthError(e);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadAgenda = async () => {
-    setIsLoading(true);
-    try {
-      const items = await getAgenda.execute();
-      setAgendaItems(items);
-      setViewMode('agenda');
-      setIsSidebarOpen(false);
-      setIsAuthenticated(true);
-    } catch (e) {
-      handleAuthError(e);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
     const init = async () => {
       try {
         const fileList = await repository.getFiles();
         setFiles(fileList);
-
-        // Load agenda items initially
-        await loadAgenda();
-
         setIsAuthenticated(true);
       } catch (e: any) {
         handleAuthError(e);
@@ -82,7 +40,7 @@ function App() {
       }
     };
     init();
-  }, [repository, getAgenda]);
+  }, [repository]);
 
   const handleSearch = async (query: string) => {
     try {
@@ -94,9 +52,22 @@ function App() {
   };
 
   const handleSearchResultClick = (path: string) => {
-    loadFile(path);
+    navigate(`/file/${encodeURIComponent(path)}`);
     setSearchResults([]); // Clear search results
   };
+
+  // Derive view state from URL for Sidebar
+  const currentPath = location.pathname;
+  const viewMode = currentPath.startsWith('/agenda') ? 'agenda' : 'file';
+  let currentFile = '';
+  if (currentPath.startsWith('/file/')) {
+    // Extract path from /file/:path
+    // Note: useParams is not available here because App is not inside a Route, 
+    // but it is inside BrowserRouter.
+    // We can manually parse.
+    const encodedPath = currentPath.replace('/file/', '');
+    currentFile = decodeURIComponent(encodedPath);
+  }
 
   if (!isAuthenticated) {
     if (isLoading) {
@@ -131,10 +102,16 @@ function App() {
       <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-gray-800 text-white transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0`}>
         <Sidebar
           files={files}
-          onFileSelect={loadFile}
+          onFileSelect={(path) => {
+            navigate(`/file/${encodeURIComponent(path)}`);
+            setIsSidebarOpen(false);
+          }}
           currentFile={currentFile}
           viewMode={viewMode}
-          onAgendaSelect={() => setViewMode('agenda')}
+          onAgendaSelect={() => {
+            navigate('/agenda');
+            setIsSidebarOpen(false);
+          }}
         />
       </div>
 
@@ -172,31 +149,14 @@ function App() {
 
         {/* Scrollable Content Area */}
         <main className="flex-1 overflow-y-auto p-4">
-          {searchResults.length > 0 && (
+          {searchResults.length > 0 ? (
             <SearchResults results={searchResults} onSelectResult={handleSearchResultClick} />
-          )}
-
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full">Loading...</div>
-          ) : viewMode === 'agenda' ? (
-            <AgendaView items={agendaItems} onItemClick={loadFile} />
-          ) : parsedFile ? (
-            <OrgViewer
-              file={parsedFile}
-              resolveImage={(src) => {
-                if (src.startsWith('http')) return src;
-                let imagePath = src;
-                if (!src.startsWith('/') && currentFile) {
-                  const currentDir = currentFile.substring(0, currentFile.lastIndexOf('/'));
-                  if (currentDir) {
-                    imagePath = `${currentDir}/${src}`;
-                  }
-                }
-                return `http://localhost:8787/api/images/${encodeURIComponent(imagePath)}`;
-              }}
-            />
           ) : (
-            <div className="flex items-center justify-center py-12">Failed to load file</div>
+            <Routes>
+              <Route path="/agenda" element={<AgendaPage repository={repository} />} />
+              <Route path="/file/:path" element={<FilePage repository={repository} />} />
+              <Route path="/" element={<Navigate to="/agenda" replace />} />
+            </Routes>
           )}
         </main>
       </div>
