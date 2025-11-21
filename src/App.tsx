@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { OrgParser } from './domain/org/parser';
+import { useState, useEffect, useMemo } from 'react';
 import type { OrgFile } from './domain/org/ast';
 import { OrgViewer } from './ui/OrgViewer';
 import { AgendaView } from './ui/AgendaView';
@@ -38,10 +37,9 @@ function App() {
   const loadFile = async (path: string) => {
     setIsLoading(true);
     try {
-      const content = await repository.readFile(path);
+      const parsed = await repository.readFile(path);
       setCurrentFile(path);
-      const parser = new OrgParser();
-      setParsedFile(parser.parse(content));
+      setParsedFile(parsed);
       setViewMode('file');
       setIsSidebarOpen(false); // Close sidebar on selection (mobile)
       setIsAuthenticated(true);
@@ -101,6 +99,17 @@ function App() {
   };
 
   if (!isAuthenticated) {
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center h-screen bg-gray-100">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">OrgDrop</h1>
+            <div className="animate-pulse text-gray-600">Loading...</div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex items-center justify-center h-screen bg-gray-100">
         <div className="text-center">

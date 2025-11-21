@@ -1,6 +1,7 @@
 import type { FileRepository } from './FileRepository';
 import type { OrgFile } from '../domain/org/ast';
 import type { SearchResult } from '../domain/search/SearchResult';
+import type { AppConfig } from '../domain/config/AppConfig';
 import { OrgParser } from '../domain/org/parser';
 
 const DUMMY_FILES: Record<string, string> = {
@@ -68,5 +69,14 @@ export class MockFileRepository implements FileRepository {
         }
 
         return results;
+    }
+
+    async getConfig(): Promise<AppConfig> {
+        return {
+            rootPath: '/',
+            config: {
+                agendaPaths: []
+            }
+        };
     }
 }
