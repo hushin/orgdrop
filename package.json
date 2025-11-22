@@ -4,7 +4,8 @@
     "scripts": {
         "dev": "pnpm --parallel --filter \"./apps/*\" dev",
         "build": "pnpm -r build",
-        "build:web": "pnpm --filter @orgdrop/domain build && pnpm --filter orgdrop build",
+        "deploy": "npx wrangler deploy --config apps/web/wrangler.jsonc",
+        "upload-version": "npx wrangler versions upload --config apps/web/wrangler.jsonc",
         "lint": "pnpm -r lint"
     },
     "devDependencies": {

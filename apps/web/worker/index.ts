@@ -14,7 +14,15 @@ interface Env {
     ASSETS: Fetcher;
 }
 
+import { logger } from 'hono/logger';
+
 const app = new Hono<{ Bindings: Env }>();
+
+app.use('*', logger());
+
+app.get('/', (c) => {
+    return c.env.ASSETS.fetch(c.req.raw);
+});
 
 // app.use('/*', async (c, next) => {
 //     const corsMiddleware = cors({
@@ -23,10 +31,6 @@ const app = new Hono<{ Bindings: Env }>();
 //     });
 //     return corsMiddleware(c, next);
 // });
-
-app.get('/', (c) => {
-    return c.text('OrgDrop Worker is running!');
-});
 
 app.get('/api/files', async (c) => {
     const token = getCookie(c, 'dropbox_token');

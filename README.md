@@ -137,9 +137,9 @@ This command will:
 ### 5. CD (Optional)
 
 Cloudflare Workers Builds, configure it to run:
-- **Build Command:** `pnpm run build:web`
-- **Deploy Command:** `npx wrangler deploy --config apps/web/wrangler.jsonc`
-- **Version Command:** `npx wrangler versions upload --config apps/web/wrangler.jsonc`
+- **Build Command:** `pnpm run build`
+- **Deploy Command:** `pnpm run deploy`
+- **Version Command:** `pnpm run upload-version`
 - **Root Directory:** `/`
 
 ## Roadmap
