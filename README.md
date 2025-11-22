@@ -91,6 +91,54 @@ OrgDrop is a modern, web-based Org-mode viewer that seamlessly integrates with D
 
 3.  Open your browser at `http://localhost:5173`.
 
+## Deployment
+
+### 1. Cloudflare Worker KV Setup
+
+Before deploying, you need to create a KV namespace for caching Dropbox files.
+
+```bash
+# Create KV namespace
+npx wrangler kv namespace create DROPBOX_CACHE
+
+# For production, you might want to create a separate one
+npx wrangler kv namespace create DROPBOX_CACHE --env production
+```
+
+Update `apps/worker/wrangler.jsonc` with the `id` and `preview_id` (if applicable) from the output.
+
+### 2. Environment Variables
+
+You need to set the following environment variables in your Cloudflare Worker settings (Settings -> Variables):
+
+- `DROPBOX_APP_KEY`: Your Dropbox App Key
+- `DROPBOX_APP_SECRET`: Your Dropbox App Secret
+- `DROPBOX_ROOT_PATH`: Root path in Dropbox (e.g., `/org`)
+- `FRONTEND_URL`: The URL of your deployed frontend (e.g., `https://orgdrop.pages.dev`)
+- `WORKER_URL`: The URL of your deployed worker (e.g., `https://orgdrop-worker.your-subdomain.workers.dev`)
+
+### 3. Dropbox App Configuration
+
+In your Dropbox App Console:
+- Add the Redirect URI: `https://<YOUR_WORKER_URL>/auth/callback`
+- Ensure `files.content.read` and `files.metadata.read` permissions are enabled.
+
+### 4. Deploy Worker
+
+```bash
+cd apps/worker
+pnpm run deploy
+```
+
+### 5. Deploy Frontend (Cloudflare Pages)
+
+You can connect your GitHub repository to Cloudflare Pages.
+- **Build Command:** `pnpm run build`
+- **Build Output Directory:** `dist`
+- **Root Directory:** `apps/web`
+- **Environment Variables:**
+    - `VITE_API_URL`: `https://<YOUR_WORKER_URL>`
+
 ## Roadmap
 
 See [docs/plan.md](docs/plan.md) for the detailed development roadmap and remaining tasks.

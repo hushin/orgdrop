@@ -9,8 +9,11 @@
     "kv_namespaces": [
         {
             "binding": "DROPBOX_CACHE",
-            "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-            "preview_id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+            "id": "a30b3ff828464016aaf55d9696c28783"
         }
-    ]
+    ],
+    "vars": {
+        "FRONTEND_URL": "http://localhost:5173",
+        "WORKER_URL": "http://localhost:8787"
+    }
 }

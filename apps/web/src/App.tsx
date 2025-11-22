@@ -18,7 +18,7 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const repository = useMemo(() => new RemoteFileRepository('http://localhost:8787'), []);
+  const repository = useMemo(() => new RemoteFileRepository(import.meta.env.VITE_API_URL || 'http://localhost:8787'), []);
   const searchFiles = useMemo(() => new SearchFilesUseCase(repository), [repository]);
 
   const handleAuthError = (e: any) => {
@@ -86,7 +86,7 @@ function App() {
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">OrgDrop</h1>
           <a
-            href="http://localhost:8787/auth/dropbox"
+            href={`${import.meta.env.VITE_API_URL || 'http://localhost:8787'}/auth/dropbox`}
             className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
           >
             Connect Dropbox

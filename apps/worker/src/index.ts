@@ -10,14 +10,19 @@ interface Env {
     DROPBOX_APP_SECRET: string;
     DROPBOX_ROOT_PATH: string;
     DROPBOX_CACHE: KVNamespace;
+    FRONTEND_URL: string;
+    WORKER_URL: string;
 }
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.use('/*', cors({
-    origin: 'http://localhost:5173', // Allow frontend
-    credentials: true, // Allow cookies
-}));
+app.use('/*', async (c, next) => {
+    const corsMiddleware = cors({
+        origin: c.env.FRONTEND_URL || 'http://localhost:5173', // Allow frontend
+        credentials: true, // Allow cookies
+    });
+    return corsMiddleware(c, next);
+});
 
 app.get('/', (c) => {
     return c.text('OrgDrop Worker is running!');
@@ -302,7 +307,8 @@ app.get('/api/agenda', async (c) => {
 app.get('/auth/dropbox', (c) => {
     const clientId = c.env.DROPBOX_APP_KEY;
     // Use the worker's URL for callback
-    const redirectUri = 'http://localhost:8787/auth/callback';
+    const workerUrl = c.env.WORKER_URL || 'http://localhost:8787';
+    const redirectUri = `${workerUrl}/auth/callback`;
     const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}`;
 
     return c.redirect(authUrl);
@@ -316,7 +322,8 @@ app.get('/auth/callback', async (c) => {
 
     const clientId = c.env.DROPBOX_APP_KEY;
     const clientSecret = c.env.DROPBOX_APP_SECRET;
-    const redirectUri = 'http://localhost:8787/auth/callback';
+    const workerUrl = c.env.WORKER_URL || 'http://localhost:8787';
+    const redirectUri = `${workerUrl}/auth/callback`;
 
     try {
         const response = await fetch('https://api.dropboxapi.com/oauth2/token', {
@@ -350,7 +357,8 @@ app.get('/auth/callback', async (c) => {
         });
 
         // Redirect back to frontend
-        return c.redirect('http://localhost:5173/');
+        const frontendUrl = c.env.FRONTEND_URL || 'http://localhost:5173';
+        return c.redirect(`${frontendUrl}/`);
     } catch (e) {
         return c.text(`Auth Error: ${e}`, 500);
     }
