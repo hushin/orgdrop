@@ -4,6 +4,8 @@ import { cors } from 'hono/cors';
 import { getCookie, setCookie } from 'hono/cookie';
 import { DropboxClient } from './dropbox';
 import { OrgParser, type AgendaItem, type OrgHeadingNode } from '@orgdrop/domain';
+import { FileCache } from './file-cache';
+import { hashToken } from './utils';
 
 interface Env {
     DROPBOX_APP_KEY: string;
@@ -53,52 +55,11 @@ app.get('/api/files/:path', async (c) => {
 
     const path = c.req.param('path');
     try {
+        const tokenHash = await hashToken(token);
         const client = new DropboxClient(token);
-        const dropboxPath = path.startsWith('/') ? path : `/${path}`;
+        const fileCache = new FileCache(client, c.env.DROPBOX_CACHE, c.executionCtx, tokenHash);
 
-        // Generate Cache Key
-        const tokenBuffer = new TextEncoder().encode(token);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', tokenBuffer);
-        const tokenHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-        const cacheKey = `${tokenHash}:${dropboxPath}`;
-
-        // 1. Check KV
-        const cached = await c.env.DROPBOX_CACHE.get(cacheKey, { type: 'json' }) as { rev: string, content: string } | null;
-
-        // Background Revalidation Logic
-        const revalidate = async () => {
-            try {
-                // Check Metadata with Dropbox
-                const metadata = await client.getMetadata(dropboxPath);
-
-                // If cache is missing or stale, update it
-                if (!cached || metadata.rev !== cached.rev) {
-                    console.log(`Cache Update Needed for ${dropboxPath} (cached: ${cached?.rev}, current: ${metadata.rev})`);
-                    const { content, rev } = await client.downloadFile(dropboxPath);
-                    await c.env.DROPBOX_CACHE.put(cacheKey, JSON.stringify({ rev, content }));
-                    console.log(`Cache Updated for ${dropboxPath}`);
-                } else {
-                    console.log(`Cache Fresh for ${dropboxPath}`);
-                }
-            } catch (e) {
-                console.error('Background revalidation failed', e);
-            }
-        };
-
-        if (cached) {
-            console.log(`Cache Hit (Stale-While-Revalidate) for ${dropboxPath}`);
-            // Return immediately
-            c.executionCtx.waitUntil(revalidate());
-            return c.text(cached.content);
-        }
-
-        // 2. No Cache - Blocking Download
-        console.log(`Cache Miss - Downloading ${dropboxPath}`);
-        const { content, rev } = await client.downloadFile(dropboxPath);
-
-        // Store in KV
-        await c.env.DROPBOX_CACHE.put(cacheKey, JSON.stringify({ rev, content }));
-
+        const { content } = await fileCache.getFile(path);
         return c.text(content);
     } catch (e: any) {
         return c.text(e.message, 404);
@@ -220,11 +181,14 @@ app.get('/api/agenda', async (c) => {
     const client = new DropboxClient(token);
 
     try {
+        const tokenHash = await hashToken(token);
+        const fileCache = new FileCache(client, c.env.DROPBOX_CACHE, c.executionCtx, tokenHash);
+
         // 1. Get Config
         let config = { agendaPaths: ['*.org', 'areas/', 'projects/', 'resources/'] };
         try {
             const configPath = rootPath === '/' ? '/orgdrop.json' : `${rootPath}/orgdrop.json`;
-            const { content } = await client.downloadFile(configPath);
+            const { content } = await fileCache.getFile(configPath);
             const parsed = JSON.parse(content);
             if (parsed.agendaPaths) {
                 config = parsed;
@@ -243,56 +207,27 @@ app.get('/api/agenda', async (c) => {
         const parser = new OrgParser();
         const items: AgendaItem[] = [];
 
-        // Generate token hash for cache key once
-        const tokenBuffer = new TextEncoder().encode(token);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', tokenBuffer);
-        const tokenHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-
         await Promise.all(agendaFiles.map(async (file) => {
             try {
+                const { content, rev } = await fileCache.getFile(file);
+
                 const dropboxPath = file.startsWith('/') ? file : `/${file}`;
                 const agendaCacheKey = `agenda:${tokenHash}:${dropboxPath}`;
-                const contentCacheKey = `${tokenHash}:${dropboxPath}`;
 
-                // 1. Check Agenda Cache
+                // Check Agenda Cache
                 const cachedAgenda = await c.env.DROPBOX_CACHE.get(agendaCacheKey, { type: 'json' }) as { rev: string, items: AgendaItem[] } | null;
 
-                // Get metadata to check freshness
-                // Optimization: We could batch metadata calls or rely on a shorter TTL if we wanted, 
-                // but for now we check metadata for correctness.
-                const metadata = await client.getMetadata(dropboxPath);
-
-                if (cachedAgenda && cachedAgenda.rev === metadata.rev) {
-                    // Cache Hit for Agenda
+                if (cachedAgenda && cachedAgenda.rev === rev) {
                     items.push(...cachedAgenda.items);
-                    return;
-                }
-
-                // 2. Cache Miss or Stale - Need to parse
-                // Check Content Cache first to avoid download if possible (though we likely need to download if rev changed)
-                let content = '';
-                const cachedContent = await c.env.DROPBOX_CACHE.get(contentCacheKey, { type: 'json' }) as { rev: string, content: string } | null;
-
-                if (cachedContent && cachedContent.rev === metadata.rev) {
-                    content = cachedContent.content;
                 } else {
-                    // Download
-                    const down = await client.downloadFile(dropboxPath);
-                    content = down.content;
-                    // Update Content Cache
-                    c.executionCtx.waitUntil(c.env.DROPBOX_CACHE.put(contentCacheKey, JSON.stringify({ rev: down.rev, content: down.content })));
+                    // Parse and Cache
+                    const orgFile = parser.parse(content);
+                    const fileItems: AgendaItem[] = [];
+                    extractTasks(orgFile.nodes, file, fileItems);
+
+                    c.executionCtx.waitUntil(c.env.DROPBOX_CACHE.put(agendaCacheKey, JSON.stringify({ rev, items: fileItems })));
+                    items.push(...fileItems);
                 }
-
-                // Parse and Extract
-                const orgFile = parser.parse(content);
-                const fileItems: AgendaItem[] = [];
-                extractTasks(orgFile.nodes, file, fileItems);
-
-                // Update Agenda Cache
-                c.executionCtx.waitUntil(c.env.DROPBOX_CACHE.put(agendaCacheKey, JSON.stringify({ rev: metadata.rev, items: fileItems })));
-
-                items.push(...fileItems);
-
             } catch (e) {
                 console.error(`Failed to process file ${file}`, e);
             }
