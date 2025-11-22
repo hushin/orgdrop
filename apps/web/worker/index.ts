@@ -14,23 +14,11 @@ interface Env {
     ASSETS: Fetcher;
 }
 
-import { logger } from 'hono/logger';
-
 const app = new Hono<{ Bindings: Env }>();
-
-app.use('*', logger());
 
 app.get('/', (c) => {
     return c.env.ASSETS.fetch(c.req.raw);
 });
-
-// app.use('/*', async (c, next) => {
-//     const corsMiddleware = cors({
-//         origin: c.env.FRONTEND_URL || 'http://localhost:5173', // Allow frontend
-//         credentials: true, // Allow cookies
-//     });
-//     return corsMiddleware(c, next);
-// });
 
 app.get('/api/files', async (c) => {
     const token = getCookie(c, 'dropbox_token');
