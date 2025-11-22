@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { SearchResult } from '../domain/search/SearchResult';
+import type { SearchResult } from '@orgdrop/domain';
 
 interface SearchBoxProps {
     onSearch: (query: string) => void;

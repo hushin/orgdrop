@@ -28,6 +28,7 @@ OrgDrop is a modern, web-based Org-mode viewer that seamlessly integrates with D
 ### Prerequisites
 
 -   Node.js (v18 or later recommended)
+-   pnpm (v9 or later)
 -   A Dropbox account and a Dropbox App (for API credentials)
 
 ### Installation
@@ -38,30 +39,28 @@ OrgDrop is a modern, web-based Org-mode viewer that seamlessly integrates with D
     cd orgdrop
     ```
 
-2.  Install frontend dependencies:
+2.  Install dependencies (from root):
     ```bash
-    npm install
+    pnpm install
     ```
 
-3.  Install backend dependencies:
+3.  Build shared packages:
     ```bash
-    cd worker
-    npm install
+    pnpm -r run build
     ```
 
 ### Configuration
 
 1.  **Backend (Cloudflare Worker)**:
-    -   Create a `.dev.vars` file in the `worker/` directory.
+    -   Create a `.dev.vars` file in the `apps/worker/` directory.
     -   Add your Dropbox App credentials:
         ```
-        DROPBOX_CLIENT_ID=your_client_id
-        DROPBOX_CLIENT_SECRET=your_client_secret
+        DROPBOX_APP_KEY=your_app_key
+        DROPBOX_APP_SECRET=your_app_secret
+        DROPBOX_ROOT_PATH=/path/to/org/files  # Optional
         ```
 
-    -   No specific environment variables are required for local development, as it connects to the local worker instance or uses mock data depending on configuration.
-
-3.  **Agenda Configuration**:
+2.  **Agenda Configuration**:
     -   To configure which files are included in the Agenda view (similar to `org-agenda-files`), create a file named `orgdrop.json` in the root of your Dropbox folder (or the folder specified by `DROPBOX_ROOT_PATH`).
     -   **Example `orgdrop.json`**:
         ```json
@@ -80,14 +79,14 @@ OrgDrop is a modern, web-based Org-mode viewer that seamlessly integrates with D
 
 1.  Start the Backend (Worker):
     ```bash
-    cd worker
-    npm run dev
+    cd apps/worker
+    pnpm run dev
     ```
 
 2.  Start the Frontend (in a separate terminal):
     ```bash
-    # from the root directory
-    npm run dev
+    cd apps/web
+    pnpm run dev
     ```
 
 3.  Open your browser at `http://localhost:5173`.

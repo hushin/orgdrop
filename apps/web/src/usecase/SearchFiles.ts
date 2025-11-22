@@ -1,5 +1,5 @@
 import type { FileRepository } from '../repository/FileRepository';
-import type { SearchResult } from '../domain/search/SearchResult';
+import type { SearchResult } from '@orgdrop/domain';
 
 export class SearchFilesUseCase {
     private fileRepository: FileRepository;

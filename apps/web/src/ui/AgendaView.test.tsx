@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { AgendaView } from './AgendaView';
-import type { AgendaItem } from '../domain/agenda/AgendaItem';
+import type { AgendaItem } from '@orgdrop/domain';
 
 // Mock Agenda Items
 const today = new Date();

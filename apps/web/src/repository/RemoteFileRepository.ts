@@ -1,8 +1,6 @@
 import type { FileRepository } from './FileRepository';
-import type { OrgFile } from '../domain/org/ast';
-import type { SearchResult } from '../domain/search/SearchResult';
-import type { AppConfig } from '../domain/config/AppConfig';
-import { OrgParser } from '../domain/org/parser';
+import type { OrgFile, AgendaItem, SearchResult, AppConfig } from '@orgdrop/domain';
+import { OrgParser } from '@orgdrop/domain';
 
 export class RemoteFileRepository implements FileRepository {
     private parser: OrgParser;
@@ -62,6 +60,19 @@ export class RemoteFileRepository implements FileRepository {
         }
         if (!response.ok) {
             throw new Error('Failed to fetch config');
+        }
+        return response.json();
+    }
+
+    async getAgenda(): Promise<AgendaItem[]> {
+        const response = await fetch(`${this.baseUrl}/api/agenda`, {
+            credentials: 'include'
+        });
+        if (response.status === 401) {
+            throw new Error('Unauthorized');
+        }
+        if (!response.ok) {
+            throw new Error('Failed to fetch agenda');
         }
         return response.json();
     }

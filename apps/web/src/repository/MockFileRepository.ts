@@ -1,8 +1,8 @@
 import type { FileRepository } from './FileRepository';
-import type { OrgFile } from '../domain/org/ast';
-import type { SearchResult } from '../domain/search/SearchResult';
-import type { AppConfig } from '../domain/config/AppConfig';
-import { OrgParser } from '../domain/org/parser';
+import type { OrgFile } from '@orgdrop/domain';
+import type { SearchResult } from '@orgdrop/domain';
+import type { AppConfig } from '@orgdrop/domain';
+import { OrgParser, type AgendaItem } from '@orgdrop/domain';
 
 const DUMMY_FILES: Record<string, string> = {
     'example.org': `
@@ -78,5 +78,9 @@ export class MockFileRepository implements FileRepository {
                 agendaPaths: []
             }
         };
+    }
+
+    async getAgenda(): Promise<AgendaItem[]> {
+        return [];
     }
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import type { OrgFile, OrgNode, OrgHeadingNode, OrgListNode, OrgListItemNode, OrgLinkNode, OrgImageNode } from '../domain/org/ast';
+import type { OrgFile, OrgNode, OrgHeadingNode, OrgListNode, OrgListItemNode, OrgLinkNode, OrgImageNode } from '@orgdrop/domain';
 
 interface OrgViewerProps {
     file: OrgFile;

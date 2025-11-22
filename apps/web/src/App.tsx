@@ -4,7 +4,7 @@ import { Sidebar } from './ui/Sidebar';
 import { RemoteFileRepository } from './repository/RemoteFileRepository';
 import { SearchBox, SearchResults } from './ui/Search';
 import { SearchFilesUseCase } from './usecase/SearchFiles';
-import type { SearchResult } from './domain/search/SearchResult';
+import type { SearchResult } from '@orgdrop/domain';
 import { AgendaPage } from './pages/AgendaPage';
 import { FilePage } from './pages/FilePage';
 

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AgendaView } from '../ui/AgendaView';
 import { GetAgendaUseCase } from '../usecase/GetAgenda';
-import type { AgendaItem } from '../domain/agenda/AgendaItem';
+import type { AgendaItem } from '@orgdrop/domain';
 import type { RemoteFileRepository } from '../repository/RemoteFileRepository';
 
 interface AgendaPageProps {

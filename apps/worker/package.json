@@ -5,7 +5,8 @@
         "deploy": "wrangler deploy"
     },
     "dependencies": {
-        "hono": "^4.0.0"
+        "hono": "^4.0.0",
+        "@orgdrop/domain": "workspace:*"
     },
     "devDependencies": {
         "@cloudflare/workers-types": "^4.20240101.0",

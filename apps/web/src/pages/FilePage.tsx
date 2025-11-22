@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import type { OrgFile } from '../domain/org/ast';
+import type { OrgFile } from '@orgdrop/domain';
 import { OrgViewer } from '../ui/OrgViewer';
 import type { RemoteFileRepository } from '../repository/RemoteFileRepository';
 

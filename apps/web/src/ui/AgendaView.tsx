@@ -1,5 +1,5 @@
 import React from 'react';
-import type { AgendaItem } from '../domain/agenda/AgendaItem';
+import type { AgendaItem } from '@orgdrop/domain';
 
 interface AgendaViewProps {
     items: AgendaItem[];

@@ -1,7 +1,9 @@
+/// <reference types="@cloudflare/workers-types" />
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { getCookie, setCookie } from 'hono/cookie';
 import { DropboxClient } from './dropbox';
+import { OrgParser, type AgendaItem, type OrgHeadingNode } from '@orgdrop/domain';
 
 interface Env {
     DROPBOX_APP_KEY: string;
@@ -203,6 +205,100 @@ app.get('/api/images/:path', async (c) => {
     }
 });
 
+app.get('/api/agenda', async (c) => {
+    const token = getCookie(c, 'dropbox_token');
+    if (!token) {
+        return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const rootPath = c.env.DROPBOX_ROOT_PATH || '';
+    const client = new DropboxClient(token);
+
+    try {
+        // 1. Get Config
+        let config = { agendaPaths: ['*.org', 'areas/', 'projects/', 'resources/'] };
+        try {
+            const configPath = rootPath === '/' ? '/orgdrop.json' : `${rootPath}/orgdrop.json`;
+            const { content } = await client.downloadFile(configPath);
+            const parsed = JSON.parse(content);
+            if (parsed.agendaPaths) {
+                config = parsed;
+            }
+        } catch (e) {
+            console.log('Config not found or invalid, using default');
+        }
+
+        // 2. List all files
+        const files = await client.listFiles(rootPath === '/' ? '' : rootPath);
+
+        // 3. Filter files
+        const agendaFiles = filterFiles(files, { rootPath, config });
+
+        // 4. Fetch and Parse
+        const parser = new OrgParser();
+        const items: AgendaItem[] = [];
+
+        // Generate token hash for cache key once
+        const tokenBuffer = new TextEncoder().encode(token);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', tokenBuffer);
+        const tokenHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+        await Promise.all(agendaFiles.map(async (file) => {
+            try {
+                const dropboxPath = file.startsWith('/') ? file : `/${file}`;
+                const agendaCacheKey = `agenda:${tokenHash}:${dropboxPath}`;
+                const contentCacheKey = `${tokenHash}:${dropboxPath}`;
+
+                // 1. Check Agenda Cache
+                const cachedAgenda = await c.env.DROPBOX_CACHE.get(agendaCacheKey, { type: 'json' }) as { rev: string, items: AgendaItem[] } | null;
+
+                // Get metadata to check freshness
+                // Optimization: We could batch metadata calls or rely on a shorter TTL if we wanted, 
+                // but for now we check metadata for correctness.
+                const metadata = await client.getMetadata(dropboxPath);
+
+                if (cachedAgenda && cachedAgenda.rev === metadata.rev) {
+                    // Cache Hit for Agenda
+                    items.push(...cachedAgenda.items);
+                    return;
+                }
+
+                // 2. Cache Miss or Stale - Need to parse
+                // Check Content Cache first to avoid download if possible (though we likely need to download if rev changed)
+                let content = '';
+                const cachedContent = await c.env.DROPBOX_CACHE.get(contentCacheKey, { type: 'json' }) as { rev: string, content: string } | null;
+
+                if (cachedContent && cachedContent.rev === metadata.rev) {
+                    content = cachedContent.content;
+                } else {
+                    // Download
+                    const down = await client.downloadFile(dropboxPath);
+                    content = down.content;
+                    // Update Content Cache
+                    c.executionCtx.waitUntil(c.env.DROPBOX_CACHE.put(contentCacheKey, JSON.stringify({ rev: down.rev, content: down.content })));
+                }
+
+                // Parse and Extract
+                const orgFile = parser.parse(content);
+                const fileItems: AgendaItem[] = [];
+                extractTasks(orgFile.nodes, file, fileItems);
+
+                // Update Agenda Cache
+                c.executionCtx.waitUntil(c.env.DROPBOX_CACHE.put(agendaCacheKey, JSON.stringify({ rev: metadata.rev, items: fileItems })));
+
+                items.push(...fileItems);
+
+            } catch (e) {
+                console.error(`Failed to process file ${file}`, e);
+            }
+        }));
+
+        return c.json(items);
+    } catch (e: any) {
+        return c.text(e.message, 500);
+    }
+});
+
 app.get('/auth/dropbox', (c) => {
     const clientId = c.env.DROPBOX_APP_KEY;
     // Use the worker's URL for callback
@@ -261,3 +357,60 @@ app.get('/auth/callback', async (c) => {
 });
 
 export default app;
+
+function filterFiles(files: string[], appConfig: { rootPath: string, config: { agendaPaths: string[] } }): string[] {
+    const { rootPath, config } = appConfig;
+    if (!config.agendaPaths || config.agendaPaths.length === 0) {
+        return files;
+    }
+
+    return files.filter(file => {
+        return config.agendaPaths.some(agendaPath => {
+            // Resolve agenda path to absolute path
+            let resolvedPath = agendaPath;
+            if (!agendaPath.startsWith('/')) {
+                resolvedPath = rootPath === '/' || rootPath === ''
+                    ? `/${agendaPath}`
+                    : `${rootPath}/${agendaPath}`;
+            }
+
+            // Handle special case for root files (*.org)
+            if (agendaPath === '*.org') {
+                const root = rootPath === '/' ? '' : rootPath;
+                // Check if file starts with root
+                if (file.startsWith(root + '/')) {
+                    const relative = file.substring(root.length + 1);
+                    // If relative contains /, it's in a subdir, so exclude it
+                    if (!relative.includes('/') && relative.endsWith('.org')) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            // Check for exact match (file)
+            if (file === resolvedPath) return true;
+
+            // Check for directory match
+            // If resolvedPath is a directory, file should start with it + '/'
+            const dirPrefix = resolvedPath.endsWith('/') ? resolvedPath : `${resolvedPath}/`;
+            if (file.startsWith(dirPrefix)) return true;
+
+            return false;
+        });
+    });
+}
+
+function extractTasks(nodes: any[], file: string, items: AgendaItem[]) {
+    for (const node of nodes) {
+        if (node.type === 'heading') {
+            const heading = node as OrgHeadingNode;
+            if (heading.todoKeyword && heading.todoKeyword !== 'DONE' && heading.todoKeyword !== 'CANCELED') {
+                items.push({ file, heading });
+            }
+        }
+        if (node.children) {
+            extractTasks(node.children, file, items);
+        }
+    }
+}
