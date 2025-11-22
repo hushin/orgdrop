@@ -9,15 +9,14 @@ interface FilePageProps {
 }
 
 export function FilePage({ repository }: FilePageProps) {
-    const { path } = useParams<{ path: string }>();
+    const params = useParams();
+    const path = params["*"];
     const [parsedFile, setParsedFile] = useState<OrgFile | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // The path param might be encoded. react-router-dom decodes params by default.
-    // If we use a wildcard route like /file/*, path would be the rest of the URL.
-    // If we use /file/:path, and pass "folder%2Ffile.org", path will be "folder/file.org".
-    // Let's assume we pass encoded path to /file/:path.
+    // The path param might be encoded or decoded depending on the router and browser.
+    // We use a wildcard route /file/* to capture the full path even if it contains slashes.
 
     useEffect(() => {
         const loadFile = async () => {

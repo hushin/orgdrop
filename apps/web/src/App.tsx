@@ -154,7 +154,7 @@ function App() {
           ) : (
             <Routes>
               <Route path="/agenda" element={<AgendaPage repository={repository} />} />
-              <Route path="/file/:path" element={<FilePage repository={repository} />} />
+              <Route path="/file/*" element={<FilePage repository={repository} />} />
               <Route path="/" element={<Navigate to="/agenda" replace />} />
             </Routes>
           )}
