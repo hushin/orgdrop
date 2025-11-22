@@ -4,6 +4,7 @@
     "scripts": {
         "dev": "pnpm -r dev",
         "build": "pnpm -r build",
+        "build:web": "pnpm --filter @orgdrop/domain build && pnpm --filter orgdrop build",
         "lint": "pnpm -r lint"
     },
     "devDependencies": {

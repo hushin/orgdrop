@@ -130,14 +130,19 @@ cd apps/worker
 pnpm run deploy
 ```
 
-### 5. Deploy Frontend (Cloudflare Pages)
+### 5. Deploy Frontend (Cloudflare Workers)
 
-You can connect your GitHub repository to Cloudflare Pages.
-- **Build Command:** `pnpm run build`
-- **Build Output Directory:** `dist`
-- **Root Directory:** `apps/web`
+You can connect your GitHub repository to Cloudflare Workers using Workers Builds.
+
+#### Configuration
+- **Build Command:** `pnpm run build:web`
+- **Deploy Command:** `npx wrangler deploy --config apps/web/wrangler.jsonc`
+- **Version Command:** `npx wrangler versions upload --config apps/web/wrangler.jsonc`
+- **Root Directory:** `/` (project root)
 - **Environment Variables:**
     - `VITE_API_URL`: `https://<YOUR_WORKER_URL>`
+
+The `build:web` script builds both the `@orgdrop/domain` package and the web app, ensuring all dependencies are correctly resolved in the monorepo structure.
 
 ## Roadmap
 
