@@ -17,6 +17,9 @@ importers:
       '@orgdrop/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      hono:
+        specifier: ^4.10.6
+        version: 4.10.6
       react:
         specifier: ^19.2.0
         version: 19.2.0
@@ -27,6 +30,9 @@ importers:
         specifier: ^7.9.6
         version: 7.9.6(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
     devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20251121.0
+        version: 4.20251121.0
       '@eslint/js':
         specifier: ^9.39.1
         version: 9.39.1
@@ -90,6 +96,9 @@ importers:
       vitest:
         specifier: ^4.0.10
         version: 4.0.13(@types/node@24.10.1)(jiti@2.6.1)(jsdom@27.2.0)(lightningcss@1.30.2)
+      wrangler:
+        specifier: ^4.50.0
+        version: 4.50.0(@cloudflare/workers-types@4.20251121.0)
 
   apps/worker:
     dependencies:

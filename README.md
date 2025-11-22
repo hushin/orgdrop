@@ -52,7 +52,7 @@ OrgDrop is a modern, web-based Org-mode viewer that seamlessly integrates with D
 ### Configuration
 
 1.  **Backend (Cloudflare Worker)**:
-    -   Create a `.dev.vars` file in the `apps/worker/` directory.
+    -   Create a `.dev.vars` file in the `apps/web/` directory.
     -   Add your Dropbox App credentials:
         ```
         DROPBOX_APP_KEY=your_app_key
@@ -77,19 +77,14 @@ OrgDrop is a modern, web-based Org-mode viewer that seamlessly integrates with D
 
 ### Running the App
 
-1.  Start the Backend (Worker):
+1.  Start the App (Frontend + Backend):
     ```bash
-    cd apps/worker
-    pnpm run dev
+    # From the root directory
+    pnpm dev
     ```
+    This will start both the Frontend (Vite) and Backend (Worker) in parallel.
 
-2.  Start the Frontend (in a separate terminal):
-    ```bash
-    cd apps/web
-    pnpm run dev
-    ```
-
-3.  Open your browser at `http://localhost:5173`.
+2.  Open your browser at `http://localhost:5173`.
 
 ## Deployment
 
@@ -105,7 +100,7 @@ npx wrangler kv namespace create DROPBOX_CACHE
 npx wrangler kv namespace create DROPBOX_CACHE --env production
 ```
 
-Update `apps/worker/wrangler.jsonc` with the `id` and `preview_id` (if applicable) from the output.
+Update `apps/web/wrangler.jsonc` with the `id` and `preview_id` (if applicable) from the output.
 
 ### 2. Environment Variables
 
@@ -114,35 +109,38 @@ You need to set the following environment variables in your Cloudflare Worker se
 - `DROPBOX_APP_KEY`: Your Dropbox App Key
 - `DROPBOX_APP_SECRET`: Your Dropbox App Secret
 - `DROPBOX_ROOT_PATH`: Root path in Dropbox (e.g., `/org`)
-- `FRONTEND_URL`: The URL of your deployed frontend (e.g., `https://orgdrop.pages.dev`)
-- `WORKER_URL`: The URL of your deployed worker (e.g., `https://orgdrop-worker.your-subdomain.workers.dev`)
 
 ### 3. Dropbox App Configuration
 
 In your Dropbox App Console:
-- Add the Redirect URI: `https://<YOUR_WORKER_URL>/auth/callback`
+- Add the Redirect URIs:
+    - Production: `https://<YOUR_WORKER_URL>/auth/callback`
+    - Local Development: `http://localhost:5173/auth/callback`
 - Ensure `files.content.read` and `files.metadata.read` permissions are enabled.
 
-### 4. Deploy Worker
+### 4. Deploy (Unified)
+
+Deploy both the Frontend and Backend as a single Cloudflare Worker.
 
 ```bash
-cd apps/worker
+cd apps/web
+pnpm run build
 pnpm run deploy
 ```
 
-### 5. Deploy Frontend (Cloudflare Workers)
+This command will:
+1.  Build the Frontend (Vite) to `apps/web/dist`.
+2.  Deploy the Worker, serving the static assets from `dist` and executing the API logic.
 
-You can connect your GitHub repository to Cloudflare Workers using Workers Builds.
+**Note:** Ensure you have set the environment variables (secrets) in Cloudflare Dashboard or using `wrangler secret put`.
 
-#### Configuration
+### 5. CD (Optional)
+
+Cloudflare Workers Builds, configure it to run:
 - **Build Command:** `pnpm run build:web`
 - **Deploy Command:** `npx wrangler deploy --config apps/web/wrangler.jsonc`
 - **Version Command:** `npx wrangler versions upload --config apps/web/wrangler.jsonc`
-- **Root Directory:** `/` (project root)
-- **Environment Variables:**
-    - `VITE_API_URL`: `https://<YOUR_WORKER_URL>`
-
-The `build:web` script builds both the `@orgdrop/domain` package and the web app, ensuring all dependencies are correctly resolved in the monorepo structure.
+- **Root Directory:** `/`
 
 ## Roadmap
 

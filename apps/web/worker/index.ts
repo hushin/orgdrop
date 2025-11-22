@@ -1,30 +1,28 @@
 /// <reference types="@cloudflare/workers-types" />
 import { Hono } from 'hono';
-import { cors } from 'hono/cors';
+
 import { getCookie, setCookie } from 'hono/cookie';
 import { DropboxClient } from './dropbox';
 import { OrgParser, type AgendaItem, type OrgHeadingNode } from '@orgdrop/domain';
 import { FileCache } from './file-cache';
 import { hashToken } from './utils';
-
 interface Env {
     DROPBOX_APP_KEY: string;
     DROPBOX_APP_SECRET: string;
     DROPBOX_ROOT_PATH: string;
     DROPBOX_CACHE: KVNamespace;
-    FRONTEND_URL: string;
-    WORKER_URL: string;
+    ASSETS: Fetcher;
 }
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.use('/*', async (c, next) => {
-    const corsMiddleware = cors({
-        origin: c.env.FRONTEND_URL || 'http://localhost:5173', // Allow frontend
-        credentials: true, // Allow cookies
-    });
-    return corsMiddleware(c, next);
-});
+// app.use('/*', async (c, next) => {
+//     const corsMiddleware = cors({
+//         origin: c.env.FRONTEND_URL || 'http://localhost:5173', // Allow frontend
+//         credentials: true, // Allow cookies
+//     });
+//     return corsMiddleware(c, next);
+// });
 
 app.get('/', (c) => {
     return c.text('OrgDrop Worker is running!');
@@ -241,9 +239,8 @@ app.get('/api/agenda', async (c) => {
 
 app.get('/auth/dropbox', (c) => {
     const clientId = c.env.DROPBOX_APP_KEY;
-    // Use the worker's URL for callback
-    const workerUrl = c.env.WORKER_URL || 'http://localhost:8787';
-    const redirectUri = `${workerUrl}/auth/callback`;
+    const url = new URL(c.req.url);
+    const redirectUri = `${url.origin}/auth/callback`;
     const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}`;
 
     return c.redirect(authUrl);
@@ -257,8 +254,8 @@ app.get('/auth/callback', async (c) => {
 
     const clientId = c.env.DROPBOX_APP_KEY;
     const clientSecret = c.env.DROPBOX_APP_SECRET;
-    const workerUrl = c.env.WORKER_URL || 'http://localhost:8787';
-    const redirectUri = `${workerUrl}/auth/callback`;
+    const url = new URL(c.req.url);
+    const redirectUri = `${url.origin}/auth/callback`;
 
     try {
         const response = await fetch('https://api.dropboxapi.com/oauth2/token', {
@@ -292,11 +289,15 @@ app.get('/auth/callback', async (c) => {
         });
 
         // Redirect back to frontend
-        const frontendUrl = c.env.FRONTEND_URL || 'http://localhost:5173';
-        return c.redirect(`${frontendUrl}/`);
+        // Redirect back to root
+        return c.redirect('/');
     } catch (e) {
         return c.text(`Auth Error: ${e}`, 500);
     }
+});
+
+app.get('*', async (c) => {
+    return await c.env.ASSETS.fetch(c.req.raw);
 });
 
 export default app;

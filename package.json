@@ -2,7 +2,7 @@
     "name": "orgdrop-monorepo",
     "private": true,
     "scripts": {
-        "dev": "pnpm -r dev",
+        "dev": "pnpm --parallel --filter \"./apps/*\" dev",
         "build": "pnpm -r build",
         "build:web": "pnpm --filter @orgdrop/domain build && pnpm --filter orgdrop build",
         "lint": "pnpm -r lint"

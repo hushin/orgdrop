@@ -2,12 +2,22 @@
 import { DropboxClient } from './dropbox';
 
 export class FileCache {
+    private client: DropboxClient;
+    private kv: KVNamespace;
+    private ctx: ExecutionContext;
+    private tokenHash: string;
+
     constructor(
-        private client: DropboxClient,
-        private kv: KVNamespace,
-        private ctx: ExecutionContext,
-        private tokenHash: string
-    ) { }
+        client: DropboxClient,
+        kv: KVNamespace,
+        ctx: ExecutionContext,
+        tokenHash: string
+    ) {
+        this.client = client;
+        this.kv = kv;
+        this.ctx = ctx;
+        this.tokenHash = tokenHash;
+    }
 
     async getFile(path: string): Promise<{ content: string; rev: string }> {
         const dropboxPath = path.startsWith('/') ? path : `/${path}`;
