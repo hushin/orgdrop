@@ -85,8 +85,7 @@ export function FilePage({ repository }: FilePageProps) {
                 */
                 // If src starts with /, it's absolute from root.
 
-                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8787';
-                return `${apiUrl}/api/images/${encodeURIComponent(imagePath)}`;
+                return `/api/images/${encodeURIComponent(imagePath)}`;
             }}
         />
     );
