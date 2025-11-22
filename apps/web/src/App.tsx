@@ -52,7 +52,7 @@ function App() {
   };
 
   const handleSearchResultClick = (path: string) => {
-    navigate(`/file/${encodeURIComponent(path)}`);
+    navigate(`/file/${path.split('/').map(encodeURIComponent).join('/')}`);
     setSearchResults([]); // Clear search results
   };
 
@@ -103,7 +103,7 @@ function App() {
         <Sidebar
           files={files}
           onFileSelect={(path) => {
-            navigate(`/file/${encodeURIComponent(path)}`);
+            navigate(`/file/${path.split('/').map(encodeURIComponent).join('/')}`);
             setIsSidebarOpen(false);
           }}
           currentFile={currentFile}

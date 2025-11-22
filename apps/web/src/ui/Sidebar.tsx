@@ -123,7 +123,7 @@ const FileTreeItem = ({
             >
                 {node.type === 'file' ? (
                     <Link
-                        to={`/file/${encodeURIComponent(node.path)}`}
+                        to={`/file/${node.path.split('/').map(encodeURIComponent).join('/')}`}
                         className="flex items-center w-full"
                         onClick={() => onSelect(node.path)}
                     >
