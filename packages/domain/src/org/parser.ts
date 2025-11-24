@@ -16,10 +16,52 @@ export class OrgParser {
         const lines = text.split(/\r?\n/);
         const nodes: OrgNode[] = [];
         let currentList: OrgListNode | null = null;
+        const metadata: Record<string, any> = {};
+        let inPropertiesDrawer = false;
 
         for (const line of lines) {
             const headingMatch = line.match(/^(\*+)\s+(.*)/);
             const listMatch = line.match(/^(\s*)([-+*]|\d+[.)])\s+(.*)/);
+            const keywordMatch = line.match(/^#\+([a-zA-Z0-9_]+):\s*(.*)/);
+            const drawerStartMatch = line.match(/^\s*:PROPERTIES:\s*$/);
+            const drawerEndMatch = line.match(/^\s*:END:\s*$/);
+            const propertyMatch = line.match(/^\s*:([a-zA-Z0-9_-]+):\s*(.*)/);
+
+            if (inPropertiesDrawer) {
+                if (drawerEndMatch) {
+                    inPropertiesDrawer = false;
+                    continue;
+                }
+                if (propertyMatch) {
+                    const key = propertyMatch[1];
+                    const value = propertyMatch[2].trim();
+
+                    // Determine target: last heading or file metadata
+                    const lastNode = nodes.length > 0 ? nodes[nodes.length - 1] : null;
+                    if (lastNode && lastNode.type === 'heading') {
+                        if (!lastNode.properties) {
+                            lastNode.properties = {};
+                        }
+                        lastNode.properties[key] = value;
+                    } else {
+                        // Top-level property -> metadata
+                        metadata[key.toLowerCase()] = value;
+                    }
+                }
+                continue; // Skip other processing inside drawer
+            }
+
+            if (drawerStartMatch) {
+                inPropertiesDrawer = true;
+                continue;
+            }
+
+            if (keywordMatch) {
+                const key = keywordMatch[1].toLowerCase();
+                const value = keywordMatch[2].trim();
+                metadata[key] = value;
+                continue;
+            }
 
             if (headingMatch) {
                 currentList = null; // Break list on heading
@@ -113,7 +155,7 @@ export class OrgParser {
 
         return {
             nodes,
-            metadata: {},
+            metadata,
         };
     }
 
