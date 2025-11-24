@@ -2,7 +2,7 @@
     "name": "orgdrop-monorepo",
     "private": true,
     "scripts": {
-        "dev": "pnpm --parallel --filter \"./apps/*\" dev",
+        "dev": "pnpm --parallel -r dev",
         "build": "pnpm -r build",
         "deploy": "npx wrangler deploy --config apps/web/wrangler.jsonc",
         "upload-version": "npx wrangler versions upload --config apps/web/wrangler.jsonc",
