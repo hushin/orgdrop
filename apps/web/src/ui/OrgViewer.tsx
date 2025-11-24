@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { OrgFile, OrgNode, OrgHeadingNode, OrgListNode, OrgListItemNode, OrgLinkNode, OrgImageNode } from '@orgdrop/domain';
 
 interface OrgViewerProps {
@@ -7,14 +7,86 @@ interface OrgViewerProps {
 }
 
 export const OrgViewer: React.FC<OrgViewerProps> = ({ file, resolveImage }) => {
+    const [collapsedIndices, setCollapsedIndices] = useState<Set<number>>(new Set());
+
+    useEffect(() => {
+        const newCollapsedIndices = new Set<number>();
+        file.nodes.forEach((node, index) => {
+            if (node.type === 'heading') {
+                const heading = node as OrgHeadingNode;
+                if (heading.tags?.includes('ARCHIVE')) {
+                    newCollapsedIndices.add(index);
+                }
+            }
+        });
+        setCollapsedIndices(newCollapsedIndices);
+    }, [file]);
+
+    const toggleCollapse = (index: number) => {
+        setCollapsedIndices(prev => {
+            const next = new Set(prev);
+            if (next.has(index)) {
+                next.delete(index);
+            } else {
+                next.add(index);
+            }
+            return next;
+        });
+    };
+
+    // Optimized visibility check
+    const getVisibleNodes = () => {
+        return file.nodes.map((node, index) => {
+            let hidden = false;
+
+            let currentLevel = Infinity;
+            if (node.type === 'heading') {
+                currentLevel = (node as OrgHeadingNode).level;
+            }
+
+            for (let i = index - 1; i >= 0; i--) {
+                const prevNode = file.nodes[i];
+                if (prevNode.type === 'heading') {
+                    const prevHeading = prevNode as OrgHeadingNode;
+                    if (prevHeading.level < currentLevel) {
+                        if (collapsedIndices.has(i)) {
+                            hidden = true;
+                            break;
+                        }
+                        // Parent is expanded, so we climb up to check grandparent
+                        currentLevel = prevHeading.level;
+                    }
+                }
+            }
+
+            return { node, index, hidden };
+        });
+    };
+
+    const visibleNodes = getVisibleNodes();
+
     return (
         <div className="max-w-4xl mx-auto p-6 bg-white shadow-sm min-h-screen">
             {Object.keys(file.metadata).length > 0 && (
                 <PropertiesViewer properties={file.metadata} />
             )}
-            {file.nodes.map((node, index) => (
-                <NodeRenderer key={index} node={node} resolveImage={resolveImage} />
-            ))}
+            {visibleNodes.map(({ node, index, hidden }) => {
+                if (hidden) return null;
+
+                if (node.type === 'heading') {
+                    return (
+                        <NodeRenderer
+                            key={index}
+                            node={node}
+                            resolveImage={resolveImage}
+                            collapsed={collapsedIndices.has(index)}
+                            onToggle={() => toggleCollapse(index)}
+                        />
+                    );
+                }
+
+                return <NodeRenderer key={index} node={node} resolveImage={resolveImage} />;
+            })}
         </div>
     );
 };
@@ -37,10 +109,17 @@ const PropertiesViewer: React.FC<{ properties: Record<string, any> }> = ({ prope
     );
 };
 
-const NodeRenderer: React.FC<{ node: OrgNode; resolveImage?: (src: string) => string }> = ({ node, resolveImage }) => {
+interface NodeRendererProps {
+    node: OrgNode;
+    resolveImage?: (src: string) => string;
+    collapsed?: boolean;
+    onToggle?: () => void;
+}
+
+const NodeRenderer: React.FC<NodeRendererProps> = ({ node, resolveImage, collapsed, onToggle }) => {
     switch (node.type) {
         case 'heading':
-            return <HeadingRenderer node={node as OrgHeadingNode} resolveImage={resolveImage} />;
+            return <HeadingRenderer node={node as OrgHeadingNode} resolveImage={resolveImage} collapsed={collapsed} onToggle={onToggle} />;
         case 'paragraph':
             return <p className="mb-4 text-gray-800 leading-relaxed"><InlineRenderer nodes={node.children || []} resolveImage={resolveImage} /></p>;
         case 'list':
@@ -50,7 +129,14 @@ const NodeRenderer: React.FC<{ node: OrgNode; resolveImage?: (src: string) => st
     }
 };
 
-const HeadingRenderer: React.FC<{ node: OrgHeadingNode; resolveImage?: (src: string) => string }> = ({ node, resolveImage }) => {
+interface HeadingRendererProps {
+    node: OrgHeadingNode;
+    resolveImage?: (src: string) => string;
+    collapsed?: boolean;
+    onToggle?: () => void;
+}
+
+const HeadingRenderer: React.FC<HeadingRendererProps> = ({ node, resolveImage, collapsed, onToggle }) => {
     const Tag = `h${Math.min(node.level, 6)}` as React.ElementType;
     const sizeClasses = {
         1: 'text-3xl border-b pb-2 mt-8 mb-4',
@@ -63,7 +149,14 @@ const HeadingRenderer: React.FC<{ node: OrgHeadingNode; resolveImage?: (src: str
 
     return (
         <div className="group">
-            <Tag className={`font-bold text-gray-900 ${sizeClasses}`}>
+            <Tag className={`font-bold text-gray-900 ${sizeClasses} flex items-center`}>
+                <span
+                    onClick={onToggle}
+                    className="mr-4 cursor-pointer text-gray-400 hover:text-gray-600 select-none w-6 inline-block text-center"
+                >
+                    {collapsed ? '▶' : '▼'}
+                </span>
+
                 {node.todoKeyword && (
                     <span className={`mr-2 px-2 py-0.5 rounded text-sm text-white ${node.todoKeyword === 'TODO' ? 'bg-red-500' :
                         node.todoKeyword === 'DONE' ? 'bg-green-500' :
@@ -73,15 +166,18 @@ const HeadingRenderer: React.FC<{ node: OrgHeadingNode; resolveImage?: (src: str
                     </span>
                 )}
                 {node.priority && <span className="mr-2 text-yellow-600 font-mono">[#{node.priority}]</span>}
-                <InlineRenderer nodes={node.children || []} resolveImage={resolveImage} />
+                <span className="flex-1">
+                    <InlineRenderer nodes={node.children || []} resolveImage={resolveImage} />
+                </span>
                 {node.tags && node.tags.length > 0 && (
                     <span className="ml-4 text-sm text-gray-500 font-normal">
                         {node.tags.map(tag => `:${tag}:`).join('')}
                     </span>
                 )}
             </Tag>
-            {node.properties && Object.keys(node.properties).length > 0 && (
-                <div className="ml-2 mb-2">
+            {/* Show properties only if not collapsed */}
+            {!collapsed && node.properties && Object.keys(node.properties).length > 0 && (
+                <div className="ml-8 mb-2">
                     <PropertiesViewer properties={node.properties} />
                 </div>
             )}
