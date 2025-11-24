@@ -5,36 +5,16 @@
 ## 残タスク
 
 ### 📝 Org-mode パーサーの拡張
-- [ ] テーブルのパース
+
 - [ ] コードブロック（`#+BEGIN_SRC`）のシンタックスハイライト
-- [ ] タグ（`:tag:`）のサポート
-- [ ] プロパティ（`:PROPERTIES:`）のサポート
-- [ ] 優先度（`[#A]`, `[#B]`, `[#C]`）の表示改善
+- [ ] url のパース、リンク化
+- [ ] テーブルのパース
 - [ ] スケジュール（`SCHEDULED:`）と締切（`DEADLINE:`）のパース
-- [ ] 繰り返しタスク（`+1w`, `.+1d` など）のサポート
+- [ ] 日付 例 `CREATED: [2025-11-20 Thu 08:45]` のパース
 
-### 📅 Agenda 機能の強化
-
-
-- [x] org-agenda-files 相当のサポート (`orgdrop.json` で設定可能)
-
-```
-  (setq my-default-org-agenda-files
-    (append
-      (directory-files org-directory t "\\.org$")
-      (directory-files-recursively (concat org-roam-directory "areas") "\\.org$")
-      (directory-files-recursively (concat org-roam-directory "projects") "\\.org$")
-      (directory-files-recursively (concat org-roam-directory "resources") "\\.org$")))
-
-  (setq org-agenda-files my-default-org-agenda-files)
-```
-
-- [ ] 日付フィルタリング（今日、今週、今月）
-- [ ] TODO ステータスのフィルタリング
-- [ ] 優先度順のソート
-- [ ] カレンダービュー
-- [ ] `SCHEDULED` と `DEADLINE` の表示
-
+### 🔗 リンク機能の拡張
+- [ ] 内部リンク（`[[id:xxx]]`, `[[*Heading]]`）のサポート
+- [ ] ファイル間リンク（`[[file:other.org]]`）のナビゲーション
 ### 🔍 検索機能の改善
 
 - [ ] 検索・読み込み除外フォルダの設定
@@ -42,40 +22,20 @@
 - [ ] 検索結果のハイライト表示
 - [ ] ファイル名での絞り込み
 - [ ] タグ検索
-- [ ] 日付範囲検索
 
 ### 🖼️ 画像表示の改善
-- [x] Dropbox 上の画像の表示（現在はローカルパスのみ）
-- [ ] 画像の遅延読み込み
 
-### 🔗 リンク機能の拡張
-- [ ] 内部リンク（`[[id:xxx]]`, `[[*Heading]]`）のサポート
-- [ ] ファイル間リンク（`[[file:other.org]]`）のナビゲーション
-- [ ] リンクのプレビュー
+- [ ] Dropbox 上の画像の表示（現在はローカルパスのみ）
+- [ ] 画像の遅延読み込み
 
 ### ⚙️ 設定機能
 - [ ] `org-todo-keywords` のカスタマイズ UI
 - [ ] `DROPBOX_ROOT_PATH` の UI での変更
 
-### 🚀 パフォーマンス最適化
-
-- [x] キャッシュ戦略（Dropbox API のレスポンスキャッシュ）
-    - [x] 初回 Cloudflare Workers KV へのキャッシュ、以降は Dropboxファイルが更新されていなければキャッシュを使用する
-
 ### 🧪 テスト
 - [ ] パーサーの単体テスト拡充
 - [ ] UseCase の単体テスト
 - [ ] E2E テスト（Playwright など）
-
-### 📦 デプロイ
-- [ ] Cloudflare Workers へのデプロイ設定
-- [ ] Cloudflare Pages へのフロントエンドデプロイ
-- [ ] 本番環境用の環境変数設定
-- [ ] CI/CD パイプラインの構築
-
-### 📚 ドキュメント
-- [ ] Dropbox App の作成手順（`docs/dropbox_setup.md` は作成済み）
-- [ ] コントリビューションガイド
 
 ---
 
