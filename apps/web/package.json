@@ -14,10 +14,12 @@
   },
   "dependencies": {
     "@orgdrop/domain": "workspace:*",
+    "@types/react-syntax-highlighter": "^15.5.13",
     "hono": "^4.10.6",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-router-dom": "^7.9.6"
+    "react-router-dom": "^7.9.6",
+    "react-syntax-highlighter": "^16.1.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20251121.0",

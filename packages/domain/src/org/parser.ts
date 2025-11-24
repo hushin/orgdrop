@@ -1,4 +1,4 @@
-import type { OrgNode, OrgFile, OrgHeadingNode, OrgListNode, OrgListItemNode, OrgLinkNode, OrgImageNode } from './ast';
+import type { OrgNode, OrgFile, OrgHeadingNode, OrgListNode, OrgListItemNode, OrgLinkNode, OrgImageNode, OrgBlockNode } from './ast';
 
 export class OrgParser {
     private todoKeywords: string[][] = [
@@ -18,8 +18,33 @@ export class OrgParser {
         let currentList: OrgListNode | null = null;
         const metadata: Record<string, any> = {};
         let inPropertiesDrawer = false;
+        let currentBlock: OrgBlockNode | null = null;
 
         for (const line of lines) {
+            // Block handling
+            if (currentBlock) {
+                const blockEndMatch = line.match(new RegExp(`^#\\+END_${currentBlock.name}`, 'i'));
+                if (blockEndMatch) {
+                    nodes.push(currentBlock);
+                    currentBlock = null;
+                } else {
+                    currentBlock.value += (currentBlock.value ? '\n' : '') + line;
+                }
+                continue;
+            }
+
+            const blockStartMatch = line.match(/^#\+BEGIN_([A-Z0-9_]+)(?:\s+(.*))?/i);
+            if (blockStartMatch) {
+                currentList = null; // Break list
+                currentBlock = {
+                    type: 'block',
+                    name: blockStartMatch[1].toUpperCase(),
+                    params: blockStartMatch[2],
+                    value: ''
+                };
+                continue;
+            }
+
             const headingMatch = line.match(/^(\*+)\s+(.*)/);
             const listMatch = line.match(/^(\s*)([-+*]|\d+[.)])\s+(.*)/);
             const keywordMatch = line.match(/^#\+([a-zA-Z0-9_]+):\s*(.*)/);

@@ -1,4 +1,4 @@
-export type OrgNodeType = 'root' | 'heading' | 'paragraph' | 'text' | 'list' | 'list_item' | 'link' | 'image';
+export type OrgNodeType = 'root' | 'heading' | 'paragraph' | 'text' | 'list' | 'list_item' | 'link' | 'image' | 'block';
 
 export interface OrgNode {
     type: OrgNodeType;
@@ -41,6 +41,13 @@ export interface OrgImageNode extends OrgNode {
     type: 'image';
     src: string;
     alt?: string;
+}
+
+export interface OrgBlockNode extends OrgNode {
+    type: 'block';
+    name: string;
+    params?: string;
+    value: string;
 }
 
 export interface OrgFile {

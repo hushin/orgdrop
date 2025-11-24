@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { OrgParser } from './parser';
-import { OrgHeadingNode } from './ast';
+import { OrgHeadingNode, OrgBlockNode } from './ast';
 
 describe('OrgParser Extension', () => {
     const parser = new OrgParser();
@@ -74,5 +74,24 @@ Content
         expect(result.metadata.title).toBe('BOM Test');
         // Should not have paragraph nodes for properties
         expect(result.nodes.length).toBe(0);
+    });
+    it('should parse code blocks', () => {
+        const text = `
+* Heading
+#+BEGIN_SRC typescript
+const a = 1;
+console.log(a);
+#+END_SRC
+`;
+        const parser = new OrgParser();
+        const result = parser.parse(text);
+        const heading = result.nodes[0] as OrgHeadingNode;
+        expect(heading.type).toBe('heading');
+
+        const block = result.nodes[1] as OrgBlockNode;
+        expect(block.type).toBe('block');
+        expect(block.name).toBe('SRC');
+        expect(block.params).toBe('typescript');
+        expect(block.value).toBe('const a = 1;\nconsole.log(a);');
     });
 });
