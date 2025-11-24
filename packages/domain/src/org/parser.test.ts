@@ -66,4 +66,13 @@ Content
         const heading = result.nodes[0] as OrgHeadingNode;
         expect(heading.properties?.HEAD_PROP).toBe('head');
     });
+
+    it('should handle file starting with BOM', () => {
+        const text = '\uFEFF:PROPERTIES:\n:ID: 123\n:END:\n#+TITLE: BOM Test';
+        const result = parser.parse(text);
+        expect(result.metadata.id).toBe('123');
+        expect(result.metadata.title).toBe('BOM Test');
+        // Should not have paragraph nodes for properties
+        expect(result.nodes.length).toBe(0);
+    });
 });

@@ -100,22 +100,6 @@ importers:
         specifier: ^4.50.0
         version: 4.50.0(@cloudflare/workers-types@4.20251121.0)
 
-  apps/worker:
-    dependencies:
-      '@orgdrop/domain':
-        specifier: workspace:*
-        version: link:../../packages/domain
-      hono:
-        specifier: ^4.0.0
-        version: 4.10.6
-    devDependencies:
-      '@cloudflare/workers-types':
-        specifier: ^4.20240101.0
-        version: 4.20251121.0
-      wrangler:
-        specifier: ^4.49.0
-        version: 4.50.0(@cloudflare/workers-types@4.20251121.0)
-
   packages/domain:
     devDependencies:
       typescript:

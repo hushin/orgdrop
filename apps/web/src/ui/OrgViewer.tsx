@@ -9,10 +9,31 @@ interface OrgViewerProps {
 export const OrgViewer: React.FC<OrgViewerProps> = ({ file, resolveImage }) => {
     return (
         <div className="max-w-4xl mx-auto p-6 bg-white shadow-sm min-h-screen">
+            {Object.keys(file.metadata).length > 0 && (
+                <PropertiesViewer properties={file.metadata} />
+            )}
             {file.nodes.map((node, index) => (
                 <NodeRenderer key={index} node={node} resolveImage={resolveImage} />
             ))}
         </div>
+    );
+};
+
+const PropertiesViewer: React.FC<{ properties: Record<string, any> }> = ({ properties }) => {
+    return (
+        <details className="mb-4 bg-gray-50 rounded border border-gray-200">
+            <summary className="px-3 py-2 text-xs font-mono text-gray-500 cursor-pointer hover:bg-gray-100 select-none">
+                :PROPERTIES:
+            </summary>
+            <div className="px-3 pb-2 text-xs font-mono text-gray-600 grid grid-cols-[auto,1fr] gap-x-4 gap-y-1">
+                {Object.entries(properties).map(([key, value]) => (
+                    <React.Fragment key={key}>
+                        <span className="text-gray-400 text-right">:{key}:</span>
+                        <span className="break-all">{String(value)}</span>
+                    </React.Fragment>
+                ))}
+            </div>
+        </details>
     );
 };
 
@@ -41,23 +62,30 @@ const HeadingRenderer: React.FC<{ node: OrgHeadingNode; resolveImage?: (src: str
     }[Math.min(node.level, 6)];
 
     return (
-        <Tag className={`font-bold text-gray-900 ${sizeClasses}`}>
-            {node.todoKeyword && (
-                <span className={`mr-2 px-2 py-0.5 rounded text-sm text-white ${node.todoKeyword === 'TODO' ? 'bg-red-500' :
-                    node.todoKeyword === 'DONE' ? 'bg-green-500' :
-                        node.todoKeyword === 'NEXT' ? 'bg-blue-500' : 'bg-gray-500'
-                    }`}>
-                    {node.todoKeyword}
-                </span>
+        <div className="group">
+            <Tag className={`font-bold text-gray-900 ${sizeClasses}`}>
+                {node.todoKeyword && (
+                    <span className={`mr-2 px-2 py-0.5 rounded text-sm text-white ${node.todoKeyword === 'TODO' ? 'bg-red-500' :
+                        node.todoKeyword === 'DONE' ? 'bg-green-500' :
+                            node.todoKeyword === 'NEXT' ? 'bg-blue-500' : 'bg-gray-500'
+                        }`}>
+                        {node.todoKeyword}
+                    </span>
+                )}
+                {node.priority && <span className="mr-2 text-yellow-600 font-mono">[#{node.priority}]</span>}
+                <InlineRenderer nodes={node.children || []} resolveImage={resolveImage} />
+                {node.tags && node.tags.length > 0 && (
+                    <span className="ml-4 text-sm text-gray-500 font-normal">
+                        {node.tags.map(tag => `:${tag}:`).join('')}
+                    </span>
+                )}
+            </Tag>
+            {node.properties && Object.keys(node.properties).length > 0 && (
+                <div className="ml-2 mb-2">
+                    <PropertiesViewer properties={node.properties} />
+                </div>
             )}
-            {node.priority && <span className="mr-2 text-yellow-600 font-mono">[#{node.priority}]</span>}
-            <InlineRenderer nodes={node.children || []} resolveImage={resolveImage} />
-            {node.tags && node.tags.length > 0 && (
-                <span className="ml-4 text-sm text-gray-500 font-normal">
-                    {node.tags.map(tag => `:${tag}:`).join('')}
-                </span>
-            )}
-        </Tag>
+        </div>
     );
 };
 
