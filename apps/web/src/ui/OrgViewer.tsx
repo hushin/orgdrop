@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import type { OrgFile, OrgNode, OrgHeadingNode, OrgListNode, OrgListItemNode, OrgLinkNode, OrgImageNode, OrgBlockNode } from '@orgdrop/domain';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+
+const BlockRenderer = React.lazy(() => import('./BlockRenderer'));
 
 interface OrgViewerProps {
     file: OrgFile;
@@ -127,7 +127,11 @@ const NodeRenderer: React.FC<NodeRendererProps> = ({ node, resolveImage, collaps
         case 'list':
             return <ListRenderer node={node as OrgListNode} resolveImage={resolveImage} />;
         case 'block':
-            return <BlockRenderer node={node as OrgBlockNode} />;
+            return (
+                <Suspense fallback={<div className="p-4 bg-gray-100 rounded animate-pulse">Loading code...</div>}>
+                    <BlockRenderer node={node as OrgBlockNode} />
+                </Suspense>
+            );
         default:
             return null;
     }
@@ -231,24 +235,4 @@ const InlineRenderer: React.FC<{ nodes: OrgNode[]; resolveImage?: (src: string) 
     );
 };
 
-const BlockRenderer: React.FC<{ node: OrgBlockNode }> = ({ node }) => {
-    if (node.name === 'SRC') {
-        const language = node.params?.trim() || 'text';
-        return (
-            <div className="mb-4 rounded overflow-hidden text-sm">
-                <SyntaxHighlighter
-                    language={language}
-                    style={vscDarkPlus}
-                    customStyle={{ margin: 0, padding: '1rem' }}
-                >
-                    {node.value}
-                </SyntaxHighlighter>
-            </div>
-        );
-    }
-    return (
-        <pre className="mb-4 p-4 bg-gray-100 rounded text-sm overflow-x-auto font-mono text-gray-800">
-            {node.value}
-        </pre>
-    );
-};
+
