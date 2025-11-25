@@ -110,4 +110,29 @@ console.log(a);
         });
         expect(paragraph.children![2]).toEqual({ type: 'text', content: ' for more info.' });
     });
+
+    it('should parse tables', () => {
+        const text = `
+| Name  | Age |
+|-------+-----|
+| Alice | 20  |
+| Bob   | 30  |
+`;
+        const parser = new OrgParser();
+        const result = parser.parse(text);
+
+        // Assuming the parser will ignore the separator line and return a table with 3 rows
+        const table = result.nodes[0] as any; // Cast to any until AST is updated
+        expect(table.type).toBe('table');
+        expect(table.children).toHaveLength(3);
+
+        const row1 = table.children[0];
+        expect(row1.type).toBe('table_row');
+        expect(row1.children[0].children[0].content).toBe('Name');
+        expect(row1.children[1].children[0].content).toBe('Age');
+
+        const row2 = table.children[1];
+        expect(row2.children[0].children[0].content).toBe('Alice');
+        expect(row2.children[1].children[0].content).toBe('20');
+    });
 });

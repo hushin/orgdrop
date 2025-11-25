@@ -1,5 +1,5 @@
 import React, { useState, useEffect, Suspense } from 'react';
-import type { OrgFile, OrgNode, OrgHeadingNode, OrgListNode, OrgListItemNode, OrgLinkNode, OrgImageNode, OrgBlockNode } from '@orgdrop/domain';
+import type { OrgFile, OrgNode, OrgHeadingNode, OrgListNode, OrgListItemNode, OrgLinkNode, OrgImageNode, OrgBlockNode, OrgTableNode, OrgTableRowNode, OrgTableCellNode } from '@orgdrop/domain';
 
 const BlockRenderer = React.lazy(() => import('./BlockRenderer'));
 
@@ -146,6 +146,8 @@ const NodeRenderer: React.FC<NodeRendererProps> = ({ node, resolveImage, collaps
                     <BlockRenderer node={node as OrgBlockNode} />
                 </Suspense>
             );
+        case 'table':
+            return <TableRenderer node={node as OrgTableNode} resolveImage={resolveImage} />;
         default:
             return null;
     }
@@ -252,4 +254,22 @@ const InlineRenderer: React.FC<{ nodes: OrgNode[]; resolveImage?: (src: string) 
     );
 };
 
-
+const TableRenderer: React.FC<{ node: OrgTableNode; resolveImage?: (src: string) => string }> = ({ node, resolveImage }) => {
+    return (
+        <div className="overflow-x-auto mb-4">
+            <table className="min-w-full border-collapse border border-gray-300">
+                <tbody>
+                    {node.children.map((row, rowIndex) => (
+                        <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            {row.children.map((cell, cellIndex) => (
+                                <td key={cellIndex} className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
+                                    <InlineRenderer nodes={cell.children || []} resolveImage={resolveImage} />
+                                </td>
+                            ))}
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+};

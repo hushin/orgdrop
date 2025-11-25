@@ -1,4 +1,4 @@
-import type { OrgNode, OrgFile, OrgHeadingNode, OrgListNode, OrgListItemNode, OrgLinkNode, OrgImageNode, OrgBlockNode } from './ast';
+import type { OrgNode, OrgFile, OrgHeadingNode, OrgListNode, OrgListItemNode, OrgLinkNode, OrgImageNode, OrgBlockNode, OrgTableNode, OrgTableRowNode, OrgTableCellNode } from './ast';
 
 export class OrgParser {
     private todoKeywords: string[][] = [
@@ -19,6 +19,7 @@ export class OrgParser {
         const metadata: Record<string, any> = {};
         let inPropertiesDrawer = false;
         let currentBlock: OrgBlockNode | null = null;
+        let currentTable: OrgTableNode | null = null;
 
         for (const line of lines) {
             // Block handling
@@ -47,6 +48,7 @@ export class OrgParser {
 
             const headingMatch = line.match(/^(\*+)\s+(.*)/);
             const listMatch = line.match(/^(\s*)([-+*]|\d+[.)])\s+(.*)/);
+            const tableRowMatch = line.match(/^\s*\|(.*)\|\s*$/);
             const keywordMatch = line.match(/^#\+([a-zA-Z0-9_]+):\s*(.*)/);
             const drawerStartMatch = line.match(/^\s*:PROPERTIES:\s*$/);
             const drawerEndMatch = line.match(/^\s*:END:\s*$/);
@@ -143,8 +145,41 @@ export class OrgParser {
                     currentList.children?.push(listItem);
                 }
 
+            } else if (tableRowMatch) {
+                currentList = null; // Break list
+
+                // Check if separator
+                // Separator usually looks like |---+---| or |---|
+                // We check if the content inside pipes consists only of - and +
+                if (/^[-+|]+$/.test(tableRowMatch[1])) {
+                    // It is a separator line
+                    if (!currentTable) {
+                        // If we hit a separator without a table started, start one (unlikely but safe)
+                        currentTable = { type: 'table', children: [] };
+                        nodes.push(currentTable);
+                    }
+                    // We ignore the separator line content for now
+                    continue;
+                }
+
+                if (!currentTable) {
+                    currentTable = { type: 'table', children: [] };
+                    nodes.push(currentTable);
+                }
+
+                const cells = tableRowMatch[1].split('|').map(c => c.trim());
+                const row: OrgTableRowNode = {
+                    type: 'table_row',
+                    children: cells.map(cellContent => ({
+                        type: 'table_cell',
+                        children: this.parseInline(cellContent)
+                    }))
+                };
+                currentTable.children.push(row);
+
             } else {
                 currentList = null; // Break list on non-list line
+                currentTable = null; // Break table on non-table line
 
                 // Check for planning line (SCHEDULED/DEADLINE)
                 // It usually appears right after the heading, but we'll check if the last node is a heading.

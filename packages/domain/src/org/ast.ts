@@ -1,4 +1,4 @@
-export type OrgNodeType = 'root' | 'heading' | 'paragraph' | 'text' | 'list' | 'list_item' | 'link' | 'image' | 'block';
+export type OrgNodeType = 'root' | 'heading' | 'paragraph' | 'text' | 'list' | 'list_item' | 'link' | 'image' | 'block' | 'table' | 'table_row' | 'table_cell';
 
 export interface OrgNode {
     type: OrgNodeType;
@@ -48,6 +48,21 @@ export interface OrgBlockNode extends OrgNode {
     name: string;
     params?: string;
     value: string;
+}
+
+export interface OrgTableNode extends OrgNode {
+    type: 'table';
+    children: OrgTableRowNode[];
+}
+
+export interface OrgTableRowNode extends OrgNode {
+    type: 'table_row';
+    children: OrgTableCellNode[];
+}
+
+export interface OrgTableCellNode extends OrgNode {
+    type: 'table_cell';
+    children: OrgNode[];
 }
 
 export interface OrgFile {
