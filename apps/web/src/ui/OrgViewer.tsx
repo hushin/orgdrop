@@ -172,13 +172,6 @@ const HeadingRenderer: React.FC<HeadingRendererProps> = ({ node, resolveImage, c
     return (
         <div className="group">
             <Tag className={`font-bold text-gray-900 ${sizeClasses} flex items-center`}>
-                <span
-                    onClick={onToggle}
-                    className="mr-4 cursor-pointer text-gray-400 hover:text-gray-600 select-none w-6 inline-block text-center"
-                >
-                    {collapsed ? '▶' : '▼'}
-                </span>
-
                 {node.todoKeyword && (
                     <span className={`mr-2 px-2 py-0.5 rounded text-sm text-white ${node.todoKeyword === 'TODO' ? 'bg-red-500' :
                         node.todoKeyword === 'DONE' ? 'bg-green-500' :
@@ -188,7 +181,7 @@ const HeadingRenderer: React.FC<HeadingRendererProps> = ({ node, resolveImage, c
                     </span>
                 )}
                 {node.priority && <span className="mr-2 text-yellow-600 font-mono">[#{node.priority}]</span>}
-                <span className="flex-1">
+                <span>
                     <InlineRenderer nodes={node.children || []} resolveImage={resolveImage} />
                 </span>
                 {node.tags && node.tags.length > 0 && (
@@ -196,6 +189,16 @@ const HeadingRenderer: React.FC<HeadingRendererProps> = ({ node, resolveImage, c
                         {node.tags.map(tag => `:${tag}:`).join('')}
                     </span>
                 )}
+                <span
+                    className="flex-1 self-stretch cursor-pointer"
+                    onClick={onToggle}
+                />
+                <span
+                    onClick={onToggle}
+                    className="ml-4 cursor-pointer text-gray-400 hover:text-gray-600 select-none w-6 inline-block text-center flex-shrink-0"
+                >
+                    {collapsed ? '▲' : '▼'}
+                </span>
             </Tag>
             {/* Show properties only if not collapsed */}
             {!collapsed && node.properties && Object.keys(node.properties).length > 0 && (
