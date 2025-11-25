@@ -62,46 +62,65 @@ app.get('/api/search', async (c) => {
         return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    const query = c.req.query('q')?.toLowerCase() || '';
+    const query = c.req.query('q')?.toLowerCase().replace(/\s+/g, ' ').trim() || '';
     if (!query) return c.json([]);
 
     const rootPath = c.env.DROPBOX_ROOT_PATH || '';
 
     try {
         const client = new DropboxClient(token);
-        // 1. Search using Dropbox API to find relevant files
-        const searchMatches = await client.searchFiles(query, rootPath === '/' ? '' : rootPath);
+        const tokenHash = await hashToken(token);
+        const fileCache = new FileCache(client, c.env.DROPBOX_CACHE, c.executionCtx, tokenHash);
 
-        // 2. Download content of matched files to find specific lines (naive implementation)
-        // Limit to top 5 files to avoid timeout
-        const topMatches = searchMatches.slice(0, 5);
+        // 1. List all files
+        const allFiles = await client.listFiles(rootPath === '/' ? '' : rootPath);
 
-        const results = await Promise.all(topMatches.map(async (match: any) => {
-            try {
-                const { content } = await client.downloadFile(match.path);
-                const lines = content.split(/\r?\n/);
-                const lineMatches = lines
-                    .map((line, index) => ({ line, index }))
-                    .filter(({ line }) => line.toLowerCase().includes(query))
-                    .map(({ line, index }) => ({
-                        lineNumber: index + 1,
-                        lineContent: line.trim()
-                    }));
+        // 3. Search in content
+        // Process in batches to avoid rate limits
+        const BATCH_SIZE = 10;
+        const results: any[] = [];
 
-                if (lineMatches.length > 0) {
-                    return {
-                        filePath: match.path, // Use full path
-                        matches: lineMatches
-                    };
+        // Filter files (exclude .git)
+        const searchFiles = allFiles.filter(file => !file.includes('/.git/'));
+
+        for (let i = 0; i < searchFiles.length; i += BATCH_SIZE) {
+            const batch = searchFiles.slice(i, i + BATCH_SIZE);
+            const batchResults = await Promise.all(batch.map(async (filePath) => {
+                try {
+                    const { content } = await fileCache.getFile(filePath);
+                    const lines = content.split(/\r?\n/);
+                    const lineMatches = lines
+                        .map((line, index) => ({ line, index }))
+                        .filter(({ line }) => {
+                            const normalizedLine = line.toLowerCase().replace(/\s+/g, ' ').trim();
+                            return normalizedLine.includes(query);
+                        })
+                        .map(({ line, index }) => ({
+                            lineNumber: index + 1,
+                            lineContent: line.trim()
+                        }));
+
+                    if (lineMatches.length > 0) {
+                        return {
+                            filePath: filePath,
+                            matches: lineMatches
+                        };
+                    }
+                    return null;
+                } catch (e) {
+                    console.error(`Failed to search in file ${filePath}`, e);
+                    return null;
                 }
-                return null;
-            } catch (e) {
-                console.error(`Failed to search in file ${match.path}`, e);
-                return null;
-            }
-        }));
+            }));
+            results.push(...batchResults.filter(r => r !== null));
 
-        return c.json(results.filter(r => r !== null));
+            // Small delay between batches
+            if (i + BATCH_SIZE < searchFiles.length) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        }
+
+        return c.json(results);
     } catch (e: any) {
         return c.text(e.message, 500);
     }

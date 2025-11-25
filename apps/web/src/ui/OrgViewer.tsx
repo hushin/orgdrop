@@ -1,14 +1,15 @@
 import React, { useState, useEffect, Suspense } from 'react';
-import type { OrgFile, OrgNode, OrgHeadingNode, OrgListNode, OrgListItemNode, OrgLinkNode, OrgImageNode, OrgBlockNode, OrgTableNode, OrgTableRowNode, OrgTableCellNode } from '@orgdrop/domain';
+import type { OrgFile, OrgNode, OrgHeadingNode, OrgListNode, OrgListItemNode, OrgLinkNode, OrgImageNode, OrgBlockNode, OrgTableNode } from '@orgdrop/domain';
 
 const BlockRenderer = React.lazy(() => import('./BlockRenderer'));
 
 interface OrgViewerProps {
     file: OrgFile;
     resolveImage?: (src: string) => string;
+    onLinkClick?: (href: string) => void;
 }
 
-export const OrgViewer: React.FC<OrgViewerProps> = ({ file, resolveImage }) => {
+export const OrgViewer: React.FC<OrgViewerProps> = ({ file, resolveImage, onLinkClick }) => {
     const [collapsedIndices, setCollapsedIndices] = useState<Set<number>>(new Set());
 
     useEffect(() => {
@@ -97,11 +98,12 @@ export const OrgViewer: React.FC<OrgViewerProps> = ({ file, resolveImage }) => {
                             resolveImage={resolveImage}
                             collapsed={collapsedIndices.has(index)}
                             onToggle={() => toggleCollapse(index)}
+                            onLinkClick={onLinkClick}
                         />
                     );
                 }
 
-                return <NodeRenderer key={index} node={node} resolveImage={resolveImage} />;
+                return <NodeRenderer key={index} node={node} resolveImage={resolveImage} onLinkClick={onLinkClick} />;
             })}
         </div>
     );
@@ -130,16 +132,17 @@ interface NodeRendererProps {
     resolveImage?: (src: string) => string;
     collapsed?: boolean;
     onToggle?: () => void;
+    onLinkClick?: (href: string) => void;
 }
 
-const NodeRenderer: React.FC<NodeRendererProps> = ({ node, resolveImage, collapsed, onToggle }) => {
+const NodeRenderer: React.FC<NodeRendererProps> = ({ node, resolveImage, collapsed, onToggle, onLinkClick }) => {
     switch (node.type) {
         case 'heading':
-            return <HeadingRenderer node={node as OrgHeadingNode} resolveImage={resolveImage} collapsed={collapsed} onToggle={onToggle} />;
+            return <HeadingRenderer node={node as OrgHeadingNode} resolveImage={resolveImage} collapsed={collapsed} onToggle={onToggle} onLinkClick={onLinkClick} />;
         case 'paragraph':
-            return <p className="mb-4 text-gray-800 leading-relaxed"><InlineRenderer nodes={node.children || []} resolveImage={resolveImage} /></p>;
+            return <p className="mb-4 text-gray-800 leading-relaxed"><InlineRenderer nodes={node.children || []} resolveImage={resolveImage} onLinkClick={onLinkClick} /></p>;
         case 'list':
-            return <ListRenderer node={node as OrgListNode} resolveImage={resolveImage} />;
+            return <ListRenderer node={node as OrgListNode} resolveImage={resolveImage} onLinkClick={onLinkClick} />;
         case 'block':
             return (
                 <Suspense fallback={<div className="p-4 bg-gray-100 rounded animate-pulse">Loading code...</div>}>
@@ -147,7 +150,7 @@ const NodeRenderer: React.FC<NodeRendererProps> = ({ node, resolveImage, collaps
                 </Suspense>
             );
         case 'table':
-            return <TableRenderer node={node as OrgTableNode} resolveImage={resolveImage} />;
+            return <TableRenderer node={node as OrgTableNode} resolveImage={resolveImage} onLinkClick={onLinkClick} />;
         default:
             return null;
     }
@@ -158,9 +161,10 @@ interface HeadingRendererProps {
     resolveImage?: (src: string) => string;
     collapsed?: boolean;
     onToggle?: () => void;
+    onLinkClick?: (href: string) => void;
 }
 
-const HeadingRenderer: React.FC<HeadingRendererProps> = ({ node, resolveImage, collapsed, onToggle }) => {
+const HeadingRenderer: React.FC<HeadingRendererProps> = ({ node, resolveImage, collapsed, onToggle, onLinkClick }) => {
     const Tag = `h${Math.min(node.level, 6)}` as React.ElementType;
     const sizeClasses = {
         1: 'text-3xl border-b pb-2 mt-8 mb-4',
@@ -172,7 +176,7 @@ const HeadingRenderer: React.FC<HeadingRendererProps> = ({ node, resolveImage, c
     }[Math.min(node.level, 6)];
 
     return (
-        <div className="group">
+        <div className="group" id={node.properties?.['ID'] || node.properties?.['CUSTOM_ID']} data-title={node.title}>
             <Tag className={`font-bold text-gray-900 ${sizeClasses} flex items-center`}>
                 {node.todoKeyword && (
                     <span className={`mr-2 px-2 py-0.5 rounded text-sm text-white ${node.todoKeyword === 'TODO' ? 'bg-red-500' :
@@ -184,7 +188,7 @@ const HeadingRenderer: React.FC<HeadingRendererProps> = ({ node, resolveImage, c
                 )}
                 {node.priority && <span className="mr-2 text-yellow-600 font-mono">[#{node.priority}]</span>}
                 <span>
-                    <InlineRenderer nodes={node.children || []} resolveImage={resolveImage} />
+                    <InlineRenderer nodes={node.children || []} resolveImage={resolveImage} onLinkClick={onLinkClick} />
                 </span>
                 {node.tags && node.tags.length > 0 && (
                     <span className="ml-4 text-sm text-gray-500 font-normal">
@@ -212,36 +216,52 @@ const HeadingRenderer: React.FC<HeadingRendererProps> = ({ node, resolveImage, c
     );
 };
 
-const ListRenderer: React.FC<{ node: OrgListNode; resolveImage?: (src: string) => string }> = ({ node, resolveImage }) => {
+const ListRenderer: React.FC<{ node: OrgListNode; resolveImage?: (src: string) => string; onLinkClick?: (href: string) => void }> = ({ node, resolveImage, onLinkClick }) => {
     const Tag = node.ordered ? 'ol' : 'ul';
     return (
         <Tag className={`mb-4 pl-6 ${node.ordered ? 'list-decimal' : 'list-disc'}`}>
             {node.children?.map((child, index) => (
-                <ListItemRenderer key={index} node={child as OrgListItemNode} resolveImage={resolveImage} />
+                <ListItemRenderer key={index} node={child as OrgListItemNode} resolveImage={resolveImage} onLinkClick={onLinkClick} />
             ))}
         </Tag>
     );
 };
 
-const ListItemRenderer: React.FC<{ node: OrgListItemNode; resolveImage?: (src: string) => string }> = ({ node, resolveImage }) => {
+const ListItemRenderer: React.FC<{ node: OrgListItemNode; resolveImage?: (src: string) => string; onLinkClick?: (href: string) => void }> = ({ node, resolveImage, onLinkClick }) => {
     return (
         <li className="mb-1">
             {node.checked !== undefined && (
                 <input type="checkbox" checked={node.checked} readOnly className="mr-2" />
             )}
-            <InlineRenderer nodes={node.children || []} resolveImage={resolveImage} />
+            <InlineRenderer nodes={node.children || []} resolveImage={resolveImage} onLinkClick={onLinkClick} />
         </li>
     );
 };
 
-const InlineRenderer: React.FC<{ nodes: OrgNode[]; resolveImage?: (src: string) => string }> = ({ nodes, resolveImage }) => {
+const InlineRenderer: React.FC<{ nodes: OrgNode[]; resolveImage?: (src: string) => string; onLinkClick?: (href: string) => void }> = ({ nodes, resolveImage, onLinkClick }) => {
     return (
         <>
             {nodes.map((node, index) => {
                 if (node.type === 'text') return <span key={index}>{node.content}</span>;
                 if (node.type === 'link') {
                     const linkNode = node as OrgLinkNode;
-                    return <a key={index} href={linkNode.src} className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">{linkNode.description}</a>;
+                    return (
+                        <a
+                            key={index}
+                            href={linkNode.src}
+                            className="text-blue-600 hover:underline"
+                            onClick={(e) => {
+                                if (onLinkClick) {
+                                    e.preventDefault();
+                                    onLinkClick(linkNode.src);
+                                }
+                            }}
+                            target={onLinkClick ? undefined : "_blank"}
+                            rel={onLinkClick ? undefined : "noopener noreferrer"}
+                        >
+                            {linkNode.description}
+                        </a>
+                    );
                 }
                 if (node.type === 'image') {
                     const imgNode = node as OrgImageNode;
@@ -254,7 +274,7 @@ const InlineRenderer: React.FC<{ nodes: OrgNode[]; resolveImage?: (src: string) 
     );
 };
 
-const TableRenderer: React.FC<{ node: OrgTableNode; resolveImage?: (src: string) => string }> = ({ node, resolveImage }) => {
+const TableRenderer: React.FC<{ node: OrgTableNode; resolveImage?: (src: string) => string; onLinkClick?: (href: string) => void }> = ({ node, resolveImage, onLinkClick }) => {
     return (
         <div className="overflow-x-auto mb-4">
             <table className="min-w-full border-collapse border border-gray-300">
@@ -263,7 +283,7 @@ const TableRenderer: React.FC<{ node: OrgTableNode; resolveImage?: (src: string)
                         <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                             {row.children.map((cell, cellIndex) => (
                                 <td key={cellIndex} className="border border-gray-300 px-4 py-2 text-sm text-gray-700">
-                                    <InlineRenderer nodes={cell.children || []} resolveImage={resolveImage} />
+                                    <InlineRenderer nodes={cell.children || []} resolveImage={resolveImage} onLinkClick={onLinkClick} />
                                 </td>
                             ))}
                         </tr>

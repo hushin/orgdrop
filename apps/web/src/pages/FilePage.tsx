@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import type { OrgFile } from '@orgdrop/domain';
 import { OrgViewer } from '../ui/OrgViewer';
 import type { RemoteFileRepository } from '../repository/RemoteFileRepository';
@@ -10,6 +10,8 @@ interface FilePageProps {
 
 export function FilePage({ repository }: FilePageProps) {
     const params = useParams();
+    const navigate = useNavigate();
+    const location = useLocation();
     const path = params["*"];
     const [parsedFile, setParsedFile] = useState<OrgFile | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -45,6 +47,20 @@ export function FilePage({ repository }: FilePageProps) {
         loadFile();
     }, [repository, path]);
 
+    // Handle hash scrolling after file load
+    useEffect(() => {
+        if (!isLoading && parsedFile && location.hash) {
+            const id = location.hash.substring(1);
+            // Small timeout to ensure DOM is ready
+            setTimeout(() => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.scrollIntoView();
+                }
+            }, 100);
+        }
+    }, [isLoading, parsedFile, location.hash]);
+
     if (isLoading) {
         return <div className="flex items-center justify-center h-full">Loading file...</div>;
     }
@@ -71,22 +87,57 @@ export function FilePage({ repository }: FilePageProps) {
                         imagePath = `${currentDir}/${src}`;
                     }
                 }
-                // Ensure we don't double slash if currentDir is empty or src starts with /
-                // But the logic above handles relative paths.
-                // Absolute paths in org mode usually start with /, but here we treat them relative to dropbox root?
-                // The original logic:
-                /*
-                if (!src.startsWith('/') && currentFile) {
-                   const currentDir = currentFile.substring(0, currentFile.lastIndexOf('/'));
-                   if (currentDir) {
-                     imagePath = `${currentDir}/${src}`;
-                   }
-                 }
-                */
-                // If src starts with /, it's absolute from root.
-
                 return `/api/images/${encodeURIComponent(imagePath)}`;
+            }}
+            onLinkClick={async (href) => {
+                if (href.startsWith('file:')) {
+                    const target = href.replace('file:', '');
+                    const resolved = resolvePath(currentFile, target);
+                    navigate(`/file/${target.startsWith('/') ? encodeURIComponent(target.substring(1)) : encodeURIComponent(resolved)}`);
+                } else if (href.startsWith('id:')) {
+                    const id = href.replace('id:', '');
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.scrollIntoView();
+                    } else {
+                        // Search for ID in other files
+                        try {
+                            const results = await repository.search(`:ID: ${id}`);
+                            if (results.length > 0) {
+                                const targetFile = results[0].filePath;
+                                // Navigate to file with hash
+                                navigate(`/file/${encodeURIComponent(targetFile)}#${id}`);
+                            } else {
+                                console.warn(`ID not found: ${id}`);
+                            }
+                        } catch (e) {
+                            console.error('Failed to search for ID', e);
+                        }
+                    }
+                } else if (href.startsWith('*')) {
+                    const title = href.substring(1);
+                    const el = document.querySelector(`[data-title="${title.replace(/"/g, '\\"')}"]`);
+                    if (el) el.scrollIntoView();
+                } else {
+                    window.open(href, '_blank');
+                }
             }}
         />
     );
+}
+
+function resolvePath(currentPath: string, relativePath: string): string {
+    if (relativePath.startsWith('/')) return relativePath;
+    const parts = currentPath.split('/');
+    parts.pop(); // Remove filename
+    const relParts = relativePath.split('/');
+    for (const part of relParts) {
+        if (part === '.') continue;
+        if (part === '..') {
+            parts.pop();
+        } else {
+            parts.push(part);
+        }
+    }
+    return parts.join('/');
 }
