@@ -93,4 +93,21 @@ console.log(a);
         expect(block.params).toBe('typescript');
         expect(block.value).toBe('const a = 1;\nconsole.log(a);');
     });
+
+    it('should parse raw URLs as links', () => {
+        const text = 'Visit https://example.com for more info.';
+        const parser = new OrgParser();
+        const result = parser.parse(text);
+
+        const paragraph = result.nodes[0];
+        expect(paragraph.type).toBe('paragraph');
+        expect(paragraph.children).toHaveLength(3);
+        expect(paragraph.children![0]).toEqual({ type: 'text', content: 'Visit ' });
+        expect(paragraph.children![1]).toEqual({
+            type: 'link',
+            src: 'https://example.com',
+            description: 'https://example.com'
+        });
+        expect(paragraph.children![2]).toEqual({ type: 'text', content: ' for more info.' });
+    });
 });

@@ -196,7 +196,7 @@ export class OrgParser {
 
         while ((match = linkRegex.exec(text)) !== null) {
             if (match.index > lastIndex) {
-                nodes.push({ type: 'text', content: text.substring(lastIndex, match.index) });
+                nodes.push(...this.parseRawUrls(text.substring(lastIndex, match.index)));
             }
 
             const src = match[1];
@@ -218,6 +218,38 @@ export class OrgParser {
             }
 
             lastIndex = linkRegex.lastIndex;
+        }
+
+        if (lastIndex < text.length) {
+            nodes.push(...this.parseRawUrls(text.substring(lastIndex)));
+        }
+
+        return nodes;
+    }
+
+    private parseRawUrls(text: string): OrgNode[] {
+        const nodes: OrgNode[] = [];
+        // Regex to match URLs. 
+        // We match http/https followed by non-whitespace characters.
+        // We exclude common trailing punctuation that might be part of the sentence but not the URL.
+        const urlRegex = /https?:\/\/[^\s]+(?<![.,;)])/g;
+
+        let lastIndex = 0;
+        let match;
+
+        while ((match = urlRegex.exec(text)) !== null) {
+            if (match.index > lastIndex) {
+                nodes.push({ type: 'text', content: text.substring(lastIndex, match.index) });
+            }
+
+            const url = match[0];
+            nodes.push({
+                type: 'link',
+                src: url,
+                description: url
+            } as OrgLinkNode);
+
+            lastIndex = urlRegex.lastIndex;
         }
 
         if (lastIndex < text.length) {
