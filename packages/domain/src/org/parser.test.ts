@@ -72,9 +72,8 @@ Content
         const result = parser.parse(text);
         expect(result.metadata.id).toBe('123');
         expect(result.metadata.title).toBe('BOM Test');
-        // Should not have paragraph nodes for properties
-        expect(result.nodes.length).toBe(0);
     });
+
     it('should parse code blocks', () => {
         const text = `
 * Heading

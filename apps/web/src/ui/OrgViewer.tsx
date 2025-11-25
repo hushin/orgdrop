@@ -67,10 +67,24 @@ export const OrgViewer: React.FC<OrgViewerProps> = ({ file, resolveImage }) => {
 
     const visibleNodes = getVisibleNodes();
 
+    const { title, filetags, ...otherMetadata } = file.metadata;
+
     return (
         <div className="max-w-4xl mx-auto p-6 bg-white shadow-sm min-h-screen">
-            {Object.keys(file.metadata).length > 0 && (
-                <PropertiesViewer properties={file.metadata} />
+            {title && <h1 className="text-4xl font-bold mb-4 text-gray-900">{title}</h1>}
+
+            {filetags && (
+                <div className="flex flex-wrap gap-2 mb-6">
+                    {(filetags as string).split(':').filter(Boolean).map(tag => (
+                        <span key={tag} className="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-full font-medium">
+                            {tag}
+                        </span>
+                    ))}
+                </div>
+            )}
+
+            {Object.keys(otherMetadata).length > 0 && (
+                <PropertiesViewer properties={otherMetadata} />
             )}
             {visibleNodes.map(({ node, index, hidden }) => {
                 if (hidden) return null;
