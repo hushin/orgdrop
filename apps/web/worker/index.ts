@@ -80,8 +80,21 @@ app.get('/api/search', async (c) => {
         const BATCH_SIZE = 50;
         const results: any[] = [];
 
-        // Filter files (exclude .git)
-        const searchFiles = allFiles.filter(file => !file.path.includes('/.git/'));
+        // Filter files (exclude .git, daily, weekly)
+        let normalizedRoot = rootPath;
+        if (!normalizedRoot.startsWith('/')) {
+            normalizedRoot = '/' + normalizedRoot;
+        }
+        const prefixBase = normalizedRoot === '/' ? '' : normalizedRoot;
+        const dailyPrefix = `${prefixBase}/daily/`;
+        const weeklyPrefix = `${prefixBase}/weekly/`;
+
+        const searchFiles = allFiles.filter(file => {
+            if (file.path.includes('/.git/')) return false;
+            if (file.path.startsWith(dailyPrefix)) return false;
+            if (file.path.startsWith(weeklyPrefix)) return false;
+            return true;
+        });
         console.log(`[Search] Searching ${searchFiles.length} files...`);
 
         for (let i = 0; i < searchFiles.length; i += BATCH_SIZE) {
