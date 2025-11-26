@@ -21,7 +21,8 @@ export class OrgParser {
         let currentBlock: OrgBlockNode | null = null;
         let currentTable: OrgTableNode | null = null;
 
-        for (const line of lines) {
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
             // Block handling
             if (currentBlock) {
                 const blockEndMatch = line.match(new RegExp(`^#\\+END_${currentBlock.name}`, 'i'));
@@ -204,11 +205,20 @@ export class OrgParser {
 
                 // Treat as paragraph/text for now if not empty
                 if (line.trim() !== '') {
-                    nodes.push({
-                        type: 'paragraph',
-                        content: line,
-                        children: this.parseInline(line)
-                    });
+                    const lastNode = nodes.length > 0 ? nodes[nodes.length - 1] : null;
+                    const prevLine = i > 0 ? lines[i - 1] : null;
+                    const isPrevLineEmpty = prevLine !== null && prevLine.trim() === '';
+
+                    if (lastNode && lastNode.type === 'paragraph' && !isPrevLineEmpty) {
+                        lastNode.content += '\n' + line;
+                        lastNode.children = this.parseInline(lastNode.content);
+                    } else {
+                        nodes.push({
+                            type: 'paragraph',
+                            content: line,
+                            children: this.parseInline(line)
+                        });
+                    }
                 }
             }
         }

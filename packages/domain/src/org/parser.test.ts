@@ -154,4 +154,62 @@ console.log(a);
             description: 'Google'
         });
     });
+
+    it('should merge consecutive lines into a single paragraph', () => {
+        const text = `Line 1
+Line 2`;
+        const parser = new OrgParser();
+        const result = parser.parse(text);
+        expect(result.nodes).toHaveLength(1);
+        expect(result.nodes[0].type).toBe('paragraph');
+        expect(result.nodes[0].content).toBe('Line 1\nLine 2');
+    });
+
+    it('should separate paragraphs with empty lines', () => {
+        const text = `Line 1
+
+Line 2`;
+        const parser = new OrgParser();
+        const result = parser.parse(text);
+        expect(result.nodes).toHaveLength(2);
+        expect(result.nodes[0].type).toBe('paragraph');
+        expect(result.nodes[0].content).toBe('Line 1');
+        expect(result.nodes[1].type).toBe('paragraph');
+        expect(result.nodes[1].content).toBe('Line 2');
+    });
+
+    it('should handle multiple empty lines as paragraph separator', () => {
+        const text = `Line 1
+
+
+Line 2`;
+        const parser = new OrgParser();
+        const result = parser.parse(text);
+        expect(result.nodes).toHaveLength(2);
+        expect(result.nodes[0].type).toBe('paragraph');
+        expect(result.nodes[0].content).toBe('Line 1');
+        expect(result.nodes[1].type).toBe('paragraph');
+        expect(result.nodes[1].content).toBe('Line 2');
+    });
+
+    it('should not merge block with text', () => {
+        const text = `
+#+BEGIN_SRC
+code
+#+END_SRC
+Text
+`;
+        const parser = new OrgParser();
+        const result = parser.parse(text);
+        
+        const nodes = result.nodes;
+        const blockIndex = nodes.findIndex(n => n.type === 'block');
+        expect(blockIndex).toBeGreaterThanOrEqual(0);
+        
+        // The text after block should be a new paragraph
+        const textNode = nodes[blockIndex + 1];
+        expect(textNode).toBeDefined();
+        expect(textNode.type).toBe('paragraph');
+        expect(textNode.content).toBe('Text');
+    });
 });
