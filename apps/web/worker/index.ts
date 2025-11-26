@@ -76,8 +76,8 @@ app.get('/api/search', async (c) => {
         const allFiles = await client.listFiles(rootPath === '/' ? '' : rootPath);
 
         // 3. Search in content
-        // Process in batches to avoid rate limits
-        const BATCH_SIZE = 50;
+        // Process in batches to avoid rate limits (only for cache misses)
+        const BATCH_SIZE = 10;
         const results: any[] = [];
 
         // Filter files (exclude .git, daily, weekly)
@@ -97,42 +97,43 @@ app.get('/api/search', async (c) => {
         });
         console.log(`[Search] Searching ${searchFiles.length} files...`);
 
-        for (let i = 0; i < searchFiles.length; i += BATCH_SIZE) {
-            const batch = searchFiles.slice(i, i + BATCH_SIZE);
-            const batchResults = await Promise.all(batch.map(async (file) => {
-                try {
-                    const { content } = await fileCache.getFile(file.path, file.rev);
-                    const lines = content.split(/\r?\n/);
-                    const lineMatches = lines
-                        .map((line, index) => ({ line, index }))
-                        .filter(({ line }) => {
-                            const normalizedLine = line.toLowerCase().replace(/\s+/g, ' ').trim();
-                            return normalizedLine.includes(query);
-                        })
-                        .map(({ line, index }) => ({
-                            lineNumber: index + 1,
-                            lineContent: line.trim()
-                        }));
-
-                    if (lineMatches.length > 0) {
-                        return {
-                            filePath: file.path,
-                            matches: lineMatches
-                        };
+        let cacheMissCount = 0;
+        for (let i = 0; i < searchFiles.length; i++) {
+            const file = searchFiles[i];
+            try {
+                const { content, cached } = await fileCache.getFile(file.path, file.rev);
+                
+                if (!cached) {
+                    cacheMissCount++;
+                    if (cacheMissCount % BATCH_SIZE === 0) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
                     }
-                    return null;
-                } catch (e) {
-                    console.error(`Failed to search in file ${file.path}`, e);
-                    return null;
                 }
-            }));
-            results.push(...batchResults.filter(r => r !== null));
 
-            // Small delay between batches
-            if (i + BATCH_SIZE < searchFiles.length) {
-                await new Promise(resolve => setTimeout(resolve, 20));
+                const lines = content.split(/\r?\n/);
+                const lineMatches = lines
+                    .map((line, index) => ({ line, index }))
+                    .filter(({ line }) => {
+                        const normalizedLine = line.toLowerCase().replace(/\s+/g, ' ').trim();
+                        return normalizedLine.includes(query);
+                    })
+                    .map(({ line, index }) => ({
+                        lineNumber: index + 1,
+                        lineContent: line.trim()
+                    }));
+
+                if (lineMatches.length > 0) {
+                    results.push({
+                        filePath: file.path,
+                        matches: lineMatches
+                    });
+                }
+            } catch (e) {
+                console.error(`Failed to search in file ${file.path}`, e);
             }
         }
+        
+        console.log(`[Search] Cache misses: ${cacheMissCount}/${searchFiles.length}`);
 
         return c.json(results);
     } catch (e: any) {

@@ -19,7 +19,7 @@ export class FileCache {
         this.tokenHash = tokenHash;
     }
 
-    async getFile(path: string, knownRev?: string): Promise<{ content: string; rev: string }> {
+    async getFile(path: string, knownRev?: string): Promise<{ content: string; rev: string; cached: boolean }> {
         const dropboxPath = path.startsWith('/') ? path : `/${path}`;
         const key = `${this.tokenHash}:${dropboxPath}`;
 
@@ -37,14 +37,14 @@ export class FileCache {
             } else {
                 this.ctx.waitUntil(this.revalidate(dropboxPath, cached.rev));
             }
-            return cached;
+            return { ...cached, cached: true };
         }
 
         // Cache Miss
         console.log(`[FileCache] Cache Miss - Downloading ${dropboxPath}`);
         const { content, rev } = await this.client.downloadFile(dropboxPath);
         await this.kv.put(key, JSON.stringify({ rev, content }));
-        return { content, rev };
+        return { content, rev, cached: false };
     }
 
     private async revalidate(path: string, cachedRev: string) {
