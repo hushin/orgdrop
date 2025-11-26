@@ -1,5 +1,6 @@
 import React from 'react';
 import type { AgendaItem } from '@orgdrop/domain';
+import { InlineRenderer } from './InlineRenderer';
 
 interface AgendaViewProps {
     items: AgendaItem[];
@@ -118,7 +119,9 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ items, onItemClick }) =>
                     {item.heading.priority && (
                         <span className="text-yellow-600 font-mono text-sm mr-1 font-bold">[#{item.heading.priority}]</span>
                     )}
-                    <span className="text-gray-900 font-medium mr-2">{item.heading.title}</span>
+                    <span className="text-gray-900 font-medium mr-2">
+                        <InlineRenderer nodes={item.heading.children} />
+                    </span>
                     {item.heading.tags && item.heading.tags.length > 0 && (
                         <span className="text-xs text-gray-400 mr-2">
                             {item.heading.tags.map(tag => `:${tag}:`).join('')}

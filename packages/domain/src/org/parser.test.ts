@@ -135,4 +135,23 @@ console.log(a);
         expect(row2.children[0].children[0].content).toBe('Alice');
         expect(row2.children[1].children[0].content).toBe('20');
     });
+
+    it('should parse links in headings', () => {
+        const text = '* TODO Check [[https://google.com][Google]]';
+        const parser = new OrgParser();
+        const result = parser.parse(text);
+        const heading = result.nodes[0] as OrgHeadingNode;
+
+        expect(heading.type).toBe('heading');
+        expect(heading.title).toBe('Check [[https://google.com][Google]]'); // Title string remains raw for now if that's how it works, or maybe it should be stripped?
+        // Actually, let's check children
+        expect(heading.children).toBeDefined();
+        expect(heading.children).toHaveLength(2);
+        expect(heading.children![0]).toEqual({ type: 'text', content: 'Check ' });
+        expect(heading.children![1]).toEqual({
+            type: 'link',
+            src: 'https://google.com',
+            description: 'Google'
+        });
+    });
 });
