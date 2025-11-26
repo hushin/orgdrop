@@ -103,26 +103,11 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ items, onItemClick }) =>
     );
 
     const renderItem = (item: AgendaItem, showFile = true) => {
-        // Level 1 is top level, so we want 0 indentation for it.
-        // But usually in Org mode * is level 1.
-        // Let's say we want to show indentation for level > 1.
-        // Or maybe we just show indentation corresponding to (level - 1).
-        const indentLevel = Math.max(0, item.heading.level - 1);
-        const indentGuides = Array.from({ length: indentLevel }).map((_, i) => (
-            <div
-                key={i}
-                className="w-5 flex-shrink-0"
-            />
-        ));
-
         return (
             <li key={item.heading.title + Math.random()} className="flex items-stretch group cursor-pointer hover:bg-gray-50 p-0 rounded overflow-hidden" onClick={() => onItemClick(item.file)}>
 
                 <div className="flex-1 flex items-start p-1">
                     {showFile && <span className="text-xs font-mono text-gray-400 mt-1 w-20 flex-shrink-0 truncate mr-2">{getCategory(item)}</span>}
-
-                    {/* Indentation Guides */}
-                    {indentGuides}
 
                     <div className="flex-1">
                         <div className="flex items-center flex-wrap">
