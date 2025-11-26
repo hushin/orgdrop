@@ -1,11 +1,11 @@
-import type { OrgHeadingNode } from '../org/ast';
+import type { OrgHeadingNode } from "../org/ast";
 
 export interface AgendaItem {
-    file: string;
-    heading: OrgHeadingNode;
+	file: string;
+	heading: OrgHeadingNode;
 }
 
 export type AgendaGroup = {
-    todoKeyword: string;
-    items: AgendaItem[];
+	todoKeyword: string;
+	items: AgendaItem[];
 };

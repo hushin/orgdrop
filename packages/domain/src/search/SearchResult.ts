@@ -1,9 +1,9 @@
 export interface SearchMatch {
-    lineNumber: number;
-    lineContent: string;
+	lineNumber: number;
+	lineContent: string;
 }
 
 export interface SearchResult {
-    filePath: string;
-    matches: SearchMatch[];
+	filePath: string;
+	matches: SearchMatch[];
 }

@@ -1,79 +1,90 @@
-import type { FileRepository } from './FileRepository';
-import type { OrgFile, AgendaItem, SearchResult, AppConfig } from '@orgdrop/domain';
-import { OrgParser } from '@orgdrop/domain';
+import type { FileRepository } from "./FileRepository";
+import type {
+	OrgFile,
+	AgendaItem,
+	SearchResult,
+	AppConfig,
+} from "@orgdrop/domain";
+import { OrgParser } from "@orgdrop/domain";
 
 export class RemoteFileRepository implements FileRepository {
-    private parser: OrgParser;
-    private baseUrl: string;
+	private parser: OrgParser;
+	private baseUrl: string;
 
-    constructor(baseUrl: string) {
-        this.parser = new OrgParser();
-        this.baseUrl = baseUrl;
-    }
+	constructor(baseUrl: string) {
+		this.parser = new OrgParser();
+		this.baseUrl = baseUrl;
+	}
 
-    async getFiles(): Promise<string[]> {
-        const response = await fetch(`${this.baseUrl}/api/files`, {
-            credentials: 'include'
-        });
-        if (response.status === 401) {
-            throw new Error('Unauthorized');
-        }
-        if (!response.ok) {
-            throw new Error('Failed to fetch file list');
-        }
-        return response.json();
-    }
+	async getFiles(): Promise<string[]> {
+		const response = await fetch(`${this.baseUrl}/api/files`, {
+			credentials: "include",
+		});
+		if (response.status === 401) {
+			throw new Error("Unauthorized");
+		}
+		if (!response.ok) {
+			throw new Error("Failed to fetch file list");
+		}
+		return response.json();
+	}
 
-    async readFile(path: string): Promise<OrgFile> {
-        const response = await fetch(`${this.baseUrl}/api/files/${encodeURIComponent(path)}`, {
-            credentials: 'include'
-        });
-        if (response.status === 401) {
-            throw new Error('Unauthorized');
-        }
-        if (!response.ok) {
-            throw new Error(`Failed to read file: ${path}`);
-        }
-        const content = await response.text();
-        return this.parser.parse(content);
-    }
+	async readFile(path: string): Promise<OrgFile> {
+		const response = await fetch(
+			`${this.baseUrl}/api/files/${encodeURIComponent(path)}`,
+			{
+				credentials: "include",
+			},
+		);
+		if (response.status === 401) {
+			throw new Error("Unauthorized");
+		}
+		if (!response.ok) {
+			throw new Error(`Failed to read file: ${path}`);
+		}
+		const content = await response.text();
+		return this.parser.parse(content);
+	}
 
-    async search(query: string): Promise<SearchResult[]> {
-        const response = await fetch(`${this.baseUrl}/api/search?q=${encodeURIComponent(query)}`, {
-            credentials: 'include'
-        });
-        if (response.status === 401) {
-            throw new Error('Unauthorized');
-        }
-        if (!response.ok) {
-            throw new Error('Failed to search');
-        }
-        return response.json();
-    }
+	async search(query: string): Promise<SearchResult[]> {
+		const response = await fetch(
+			`${this.baseUrl}/api/search?q=${encodeURIComponent(query)}`,
+			{
+				credentials: "include",
+			},
+		);
+		if (response.status === 401) {
+			throw new Error("Unauthorized");
+		}
+		if (!response.ok) {
+			throw new Error("Failed to search");
+		}
+		return response.json();
+	}
 
-    async getConfig(): Promise<AppConfig> {
-        const response = await fetch(`${this.baseUrl}/api/config`, {
-            credentials: 'include'
-        });
-        if (response.status === 401) {
-            throw new Error('Unauthorized');
-        }
-        if (!response.ok) {
-            throw new Error('Failed to fetch config');
-        }
-        return response.json();
-    }
+	async getConfig(): Promise<AppConfig> {
+		const response = await fetch(`${this.baseUrl}/api/config`, {
+			credentials: "include",
+		});
+		if (response.status === 401) {
+			throw new Error("Unauthorized");
+		}
+		if (!response.ok) {
+			throw new Error("Failed to fetch config");
+		}
+		return response.json();
+	}
 
-    async getAgenda(): Promise<AgendaItem[]> {
-        const response = await fetch(`${this.baseUrl}/api/agenda`, {
-            credentials: 'include'
-        });
-        if (response.status === 401) {
-            throw new Error('Unauthorized');
-        }
-        if (!response.ok) {
-            throw new Error('Failed to fetch agenda');
-        }
-        return response.json();
-    }
+	async getAgenda(): Promise<AgendaItem[]> {
+		const response = await fetch(`${this.baseUrl}/api/agenda`, {
+			credentials: "include",
+		});
+		if (response.status === 401) {
+			throw new Error("Unauthorized");
+		}
+		if (!response.ok) {
+			throw new Error("Failed to fetch agenda");
+		}
+		return response.json();
+	}
 }

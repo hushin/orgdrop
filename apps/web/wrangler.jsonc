@@ -1,22 +1,19 @@
 {
-    "name": "orgdrop",
-    "compatibility_date": "2025-11-22",
-    "assets": {
-        "directory": "./dist",
-        "not_found_handling": "single-page-application",
-        "run_worker_first": [
-            "/api/*",
-            "/auth/*"
-        ]
-    },
-    "main": "worker/index.ts",
-    "observability": {
-        "enabled": true
-    },
-    "kv_namespaces": [
-        {
-            "binding": "DROPBOX_CACHE",
-            "id": "a30b3ff828464016aaf55d9696c28783"
-        }
-    ]
+	"name": "orgdrop",
+	"compatibility_date": "2025-11-22",
+	"assets": {
+		"directory": "./dist",
+		"not_found_handling": "single-page-application",
+		"run_worker_first": ["/api/*", "/auth/*"]
+	},
+	"main": "worker/index.ts",
+	"observability": {
+		"enabled": true
+	},
+	"kv_namespaces": [
+		{
+			"binding": "DROPBOX_CACHE",
+			"id": "a30b3ff828464016aaf55d9696c28783"
+		}
+	]
 }

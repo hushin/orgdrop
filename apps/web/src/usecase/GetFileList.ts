@@ -1,13 +1,13 @@
-import type { FileRepository } from '../repository/FileRepository';
+import type { FileRepository } from "../repository/FileRepository";
 
 export class GetFileListUseCase {
-    private fileRepository: FileRepository;
+	private fileRepository: FileRepository;
 
-    constructor(fileRepository: FileRepository) {
-        this.fileRepository = fileRepository;
-    }
+	constructor(fileRepository: FileRepository) {
+		this.fileRepository = fileRepository;
+	}
 
-    async execute(): Promise<string[]> {
-        return this.fileRepository.getFiles();
-    }
+	async execute(): Promise<string[]> {
+		return this.fileRepository.getFiles();
+	}
 }

@@ -1,356 +1,382 @@
-import type { OrgNode, OrgFile, OrgHeadingNode, OrgListNode, OrgListItemNode, OrgLinkNode, OrgImageNode, OrgBlockNode, OrgTableNode, OrgTableRowNode, OrgTableCellNode } from './ast';
+import type {
+	OrgNode,
+	OrgFile,
+	OrgHeadingNode,
+	OrgListNode,
+	OrgListItemNode,
+	OrgLinkNode,
+	OrgImageNode,
+	OrgBlockNode,
+	OrgTableNode,
+	OrgTableRowNode,
+	OrgTableCellNode,
+} from "./ast";
 
 export class OrgParser {
-    private todoKeywords: string[][] = [
-        ['TODO', 'NEXT', '|', 'DONE'],
-        ['WAITING', '|', 'CANCELED']
-    ];
+	private todoKeywords: string[][] = [
+		["TODO", "NEXT", "|", "DONE"],
+		["WAITING", "|", "CANCELED"],
+	];
 
-    constructor(todoKeywords?: string[][]) {
-        if (todoKeywords) {
-            this.todoKeywords = todoKeywords;
-        }
-    }
+	constructor(todoKeywords?: string[][]) {
+		if (todoKeywords) {
+			this.todoKeywords = todoKeywords;
+		}
+	}
 
-    parse(text: string): OrgFile {
-        const lines = text.split(/\r?\n/);
-        const nodes: OrgNode[] = [];
-        let currentList: OrgListNode | null = null;
-        const metadata: Record<string, any> = {};
-        let inPropertiesDrawer = false;
-        let currentBlock: OrgBlockNode | null = null;
-        let currentTable: OrgTableNode | null = null;
+	parse(text: string): OrgFile {
+		const lines = text.split(/\r?\n/);
+		const nodes: OrgNode[] = [];
+		let currentList: OrgListNode | null = null;
+		const metadata: Record<string, any> = {};
+		let inPropertiesDrawer = false;
+		let currentBlock: OrgBlockNode | null = null;
+		let currentTable: OrgTableNode | null = null;
 
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            // Block handling
-            if (currentBlock) {
-                const blockEndMatch = line.match(new RegExp(`^#\\+END_${currentBlock.name}`, 'i'));
-                if (blockEndMatch) {
-                    nodes.push(currentBlock);
-                    currentBlock = null;
-                } else {
-                    currentBlock.value += (currentBlock.value ? '\n' : '') + line;
-                }
-                continue;
-            }
+		for (let i = 0; i < lines.length; i++) {
+			const line = lines[i];
+			// Block handling
+			if (currentBlock) {
+				const blockEndMatch = line.match(
+					new RegExp(`^#\\+END_${currentBlock.name}`, "i"),
+				);
+				if (blockEndMatch) {
+					nodes.push(currentBlock);
+					currentBlock = null;
+				} else {
+					currentBlock.value += (currentBlock.value ? "\n" : "") + line;
+				}
+				continue;
+			}
 
-            const blockStartMatch = line.match(/^#\+BEGIN_([A-Z0-9_]+)(?:\s+(.*))?/i);
-            if (blockStartMatch) {
-                currentList = null; // Break list
-                currentBlock = {
-                    type: 'block',
-                    name: blockStartMatch[1].toUpperCase(),
-                    params: blockStartMatch[2],
-                    value: ''
-                };
-                continue;
-            }
+			const blockStartMatch = line.match(/^#\+BEGIN_([A-Z0-9_]+)(?:\s+(.*))?/i);
+			if (blockStartMatch) {
+				currentList = null; // Break list
+				currentBlock = {
+					type: "block",
+					name: blockStartMatch[1].toUpperCase(),
+					params: blockStartMatch[2],
+					value: "",
+				};
+				continue;
+			}
 
-            const headingMatch = line.match(/^(\*+)\s+(.*)/);
-            const listMatch = line.match(/^(\s*)([-+*]|\d+[.)])\s+(.*)/);
-            const tableRowMatch = line.match(/^\s*\|(.*)\|\s*$/);
-            const keywordMatch = line.match(/^#\+([a-zA-Z0-9_]+):\s*(.*)/);
-            const drawerStartMatch = line.match(/^\s*:PROPERTIES:\s*$/);
-            const drawerEndMatch = line.match(/^\s*:END:\s*$/);
-            const propertyMatch = line.match(/^\s*:([a-zA-Z0-9_-]+):\s*(.*)/);
+			const headingMatch = line.match(/^(\*+)\s+(.*)/);
+			const listMatch = line.match(/^(\s*)([-+*]|\d+[.)])\s+(.*)/);
+			const tableRowMatch = line.match(/^\s*\|(.*)\|\s*$/);
+			const keywordMatch = line.match(/^#\+([a-zA-Z0-9_]+):\s*(.*)/);
+			const drawerStartMatch = line.match(/^\s*:PROPERTIES:\s*$/);
+			const drawerEndMatch = line.match(/^\s*:END:\s*$/);
+			const propertyMatch = line.match(/^\s*:([a-zA-Z0-9_-]+):\s*(.*)/);
 
-            if (inPropertiesDrawer) {
-                if (drawerEndMatch) {
-                    inPropertiesDrawer = false;
-                    continue;
-                }
-                if (propertyMatch) {
-                    const key = propertyMatch[1];
-                    const value = propertyMatch[2].trim();
+			if (inPropertiesDrawer) {
+				if (drawerEndMatch) {
+					inPropertiesDrawer = false;
+					continue;
+				}
+				if (propertyMatch) {
+					const key = propertyMatch[1];
+					const value = propertyMatch[2].trim();
 
-                    // Determine target: last heading or file metadata
-                    const lastNode = nodes.length > 0 ? nodes[nodes.length - 1] : null;
-                    if (lastNode && lastNode.type === 'heading') {
-                        if (!lastNode.properties) {
-                            lastNode.properties = {};
-                        }
-                        lastNode.properties[key] = value;
-                    } else {
-                        // Top-level property -> metadata
-                        metadata[key.toLowerCase()] = value;
-                    }
-                }
-                continue; // Skip other processing inside drawer
-            }
+					// Determine target: last heading or file metadata
+					const lastNode = nodes.length > 0 ? nodes[nodes.length - 1] : null;
+					if (lastNode && lastNode.type === "heading") {
+						if (!lastNode.properties) {
+							lastNode.properties = {};
+						}
+						lastNode.properties[key] = value;
+					} else {
+						// Top-level property -> metadata
+						metadata[key.toLowerCase()] = value;
+					}
+				}
+				continue; // Skip other processing inside drawer
+			}
 
-            if (drawerStartMatch) {
-                inPropertiesDrawer = true;
-                continue;
-            }
+			if (drawerStartMatch) {
+				inPropertiesDrawer = true;
+				continue;
+			}
 
-            if (keywordMatch) {
-                const key = keywordMatch[1].toLowerCase();
-                const value = keywordMatch[2].trim();
-                metadata[key] = value;
-                continue;
-            }
+			if (keywordMatch) {
+				const key = keywordMatch[1].toLowerCase();
+				const value = keywordMatch[2].trim();
+				metadata[key] = value;
+				continue;
+			}
 
-            if (headingMatch) {
-                currentList = null; // Break list on heading
-                const level = headingMatch[1].length;
-                const rawTitle = headingMatch[2];
-                const { todoKeyword, priority, title, tags } = this.parseHeadingContent(rawTitle);
+			if (headingMatch) {
+				currentList = null; // Break list on heading
+				const level = headingMatch[1].length;
+				const rawTitle = headingMatch[2];
+				const { todoKeyword, priority, title, tags } =
+					this.parseHeadingContent(rawTitle);
 
-                const headingNode: OrgHeadingNode = {
-                    type: 'heading',
-                    level,
-                    todoKeyword,
-                    priority,
-                    title,
-                    tags,
-                    children: this.parseInline(title) // Parse title for links/images too? Usually titles are plain text but can have links.
-                };
-                nodes.push(headingNode);
-            } else if (listMatch) {
-                const indent = listMatch[1].length;
-                const bullet = listMatch[2];
-                let content = listMatch[3];
-                const ordered = /^\d+[.)]/.test(bullet);
+				const headingNode: OrgHeadingNode = {
+					type: "heading",
+					level,
+					todoKeyword,
+					priority,
+					title,
+					tags,
+					children: this.parseInline(title), // Parse title for links/images too? Usually titles are plain text but can have links.
+				};
+				nodes.push(headingNode);
+			} else if (listMatch) {
+				const indent = listMatch[1].length;
+				const bullet = listMatch[2];
+				let content = listMatch[3];
+				const ordered = /^\d+[.)]/.test(bullet);
 
-                // Check for checkbox [ ] [X] [-]
-                const checkboxMatch = content.match(/^\[([ X-])\]\s+(.*)/);
-                let checked: boolean | undefined;
-                if (checkboxMatch) {
-                    checked = checkboxMatch[1] !== ' ';
-                    content = checkboxMatch[2];
-                }
+				// Check for checkbox [ ] [X] [-]
+				const checkboxMatch = content.match(/^\[([ X-])\]\s+(.*)/);
+				let checked: boolean | undefined;
+				if (checkboxMatch) {
+					checked = checkboxMatch[1] !== " ";
+					content = checkboxMatch[2];
+				}
 
-                const listItem: OrgListItemNode = {
-                    type: 'list_item',
-                    indent,
-                    bullet,
-                    checked,
-                    children: this.parseInline(content)
-                };
+				const listItem: OrgListItemNode = {
+					type: "list_item",
+					indent,
+					bullet,
+					checked,
+					children: this.parseInline(content),
+				};
 
-                // Simple list handling: if currentList exists and matches type/indent, append.
-                // Otherwise create new list.
-                // Note: This is a simplified list parser. Nested lists need more complex stack logic.
-                // For now, let's just group consecutive list items.
+				// Simple list handling: if currentList exists and matches type/indent, append.
+				// Otherwise create new list.
+				// Note: This is a simplified list parser. Nested lists need more complex stack logic.
+				// For now, let's just group consecutive list items.
 
-                if (!currentList || currentList.ordered !== ordered) {
-                    currentList = {
-                        type: 'list',
-                        ordered,
-                        indent,
-                        children: [listItem]
-                    };
-                    nodes.push(currentList);
-                } else {
-                    currentList.children?.push(listItem);
-                }
+				if (!currentList || currentList.ordered !== ordered) {
+					currentList = {
+						type: "list",
+						ordered,
+						indent,
+						children: [listItem],
+					};
+					nodes.push(currentList);
+				} else {
+					currentList.children?.push(listItem);
+				}
+			} else if (tableRowMatch) {
+				currentList = null; // Break list
 
-            } else if (tableRowMatch) {
-                currentList = null; // Break list
+				// Check if separator
+				// Separator usually looks like |---+---| or |---|
+				// We check if the content inside pipes consists only of - and +
+				if (/^[-+|]+$/.test(tableRowMatch[1])) {
+					// It is a separator line
+					if (!currentTable) {
+						// If we hit a separator without a table started, start one (unlikely but safe)
+						currentTable = { type: "table", children: [] };
+						nodes.push(currentTable);
+					}
+					// We ignore the separator line content for now
+					continue;
+				}
 
-                // Check if separator
-                // Separator usually looks like |---+---| or |---|
-                // We check if the content inside pipes consists only of - and +
-                if (/^[-+|]+$/.test(tableRowMatch[1])) {
-                    // It is a separator line
-                    if (!currentTable) {
-                        // If we hit a separator without a table started, start one (unlikely but safe)
-                        currentTable = { type: 'table', children: [] };
-                        nodes.push(currentTable);
-                    }
-                    // We ignore the separator line content for now
-                    continue;
-                }
+				if (!currentTable) {
+					currentTable = { type: "table", children: [] };
+					nodes.push(currentTable);
+				}
 
-                if (!currentTable) {
-                    currentTable = { type: 'table', children: [] };
-                    nodes.push(currentTable);
-                }
+				const cells = tableRowMatch[1].split("|").map((c) => c.trim());
+				const row: OrgTableRowNode = {
+					type: "table_row",
+					children: cells.map((cellContent) => ({
+						type: "table_cell",
+						children: this.parseInline(cellContent),
+					})),
+				};
+				currentTable.children.push(row);
+			} else {
+				currentList = null; // Break list on non-list line
+				currentTable = null; // Break table on non-table line
 
-                const cells = tableRowMatch[1].split('|').map(c => c.trim());
-                const row: OrgTableRowNode = {
-                    type: 'table_row',
-                    children: cells.map(cellContent => ({
-                        type: 'table_cell',
-                        children: this.parseInline(cellContent)
-                    }))
-                };
-                currentTable.children.push(row);
+				// Check for planning line (SCHEDULED/DEADLINE)
+				// It usually appears right after the heading, but we'll check if the last node is a heading.
+				// Example: SCHEDULED: <2023-10-27 Fri> DEADLINE: <2023-10-28 Sat>
+				const planningMatch = line.match(/(SCHEDULED|DEADLINE):\s*<([^>]+)>/);
 
-            } else {
-                currentList = null; // Break list on non-list line
-                currentTable = null; // Break table on non-table line
+				if (planningMatch) {
+					const lastNode = nodes[nodes.length - 1];
+					if (lastNode && lastNode.type === "heading") {
+						const scheduledMatch = line.match(/SCHEDULED:\s*<([^>]+)>/);
+						const deadlineMatch = line.match(/DEADLINE:\s*<([^>]+)>/);
 
-                // Check for planning line (SCHEDULED/DEADLINE)
-                // It usually appears right after the heading, but we'll check if the last node is a heading.
-                // Example: SCHEDULED: <2023-10-27 Fri> DEADLINE: <2023-10-28 Sat>
-                const planningMatch = line.match(/(SCHEDULED|DEADLINE):\s*<([^>]+)>/);
+						if (scheduledMatch) {
+							(lastNode as OrgHeadingNode).scheduled = scheduledMatch[1];
+						}
+						if (deadlineMatch) {
+							(lastNode as OrgHeadingNode).deadline = deadlineMatch[1];
+						}
+						continue; // Skip adding this line as a paragraph
+					}
+				}
 
-                if (planningMatch) {
-                    const lastNode = nodes[nodes.length - 1];
-                    if (lastNode && lastNode.type === 'heading') {
-                        const scheduledMatch = line.match(/SCHEDULED:\s*<([^>]+)>/);
-                        const deadlineMatch = line.match(/DEADLINE:\s*<([^>]+)>/);
+				// Treat as paragraph/text for now if not empty
+				if (line.trim() !== "") {
+					const lastNode = nodes.length > 0 ? nodes[nodes.length - 1] : null;
+					const prevLine = i > 0 ? lines[i - 1] : null;
+					const isPrevLineEmpty = prevLine !== null && prevLine.trim() === "";
 
-                        if (scheduledMatch) {
-                            (lastNode as OrgHeadingNode).scheduled = scheduledMatch[1];
-                        }
-                        if (deadlineMatch) {
-                            (lastNode as OrgHeadingNode).deadline = deadlineMatch[1];
-                        }
-                        continue; // Skip adding this line as a paragraph
-                    }
-                }
+					if (lastNode && lastNode.type === "paragraph" && !isPrevLineEmpty) {
+						lastNode.content += "\n" + line;
+						lastNode.children = this.parseInline(lastNode.content);
+					} else {
+						nodes.push({
+							type: "paragraph",
+							content: line,
+							children: this.parseInline(line),
+						});
+					}
+				}
+			}
+		}
 
-                // Treat as paragraph/text for now if not empty
-                if (line.trim() !== '') {
-                    const lastNode = nodes.length > 0 ? nodes[nodes.length - 1] : null;
-                    const prevLine = i > 0 ? lines[i - 1] : null;
-                    const isPrevLineEmpty = prevLine !== null && prevLine.trim() === '';
+		return {
+			nodes,
+			metadata,
+		};
+	}
 
-                    if (lastNode && lastNode.type === 'paragraph' && !isPrevLineEmpty) {
-                        lastNode.content += '\n' + line;
-                        lastNode.children = this.parseInline(lastNode.content);
-                    } else {
-                        nodes.push({
-                            type: 'paragraph',
-                            content: line,
-                            children: this.parseInline(line)
-                        });
-                    }
-                }
-            }
-        }
+	private parseInline(text: string): OrgNode[] {
+		const nodes: OrgNode[] = [];
+		// Regex for links: [[src][desc]] or [[src]]
+		// Regex for images: file:path.png or [[file:path.png]] (handled by link regex usually, but we need to distinguish)
+		// Simplified inline parser: split by links
 
-        return {
-            nodes,
-            metadata,
-        };
-    }
+		const linkRegex = /\[\[(.*?)\](?:\[(.*?)\])?\]/g;
+		let lastIndex = 0;
+		let match;
 
-    private parseInline(text: string): OrgNode[] {
-        const nodes: OrgNode[] = [];
-        // Regex for links: [[src][desc]] or [[src]]
-        // Regex for images: file:path.png or [[file:path.png]] (handled by link regex usually, but we need to distinguish)
-        // Simplified inline parser: split by links
+		while ((match = linkRegex.exec(text)) !== null) {
+			if (match.index > lastIndex) {
+				nodes.push(
+					...this.parseRawUrls(text.substring(lastIndex, match.index)),
+				);
+			}
 
-        const linkRegex = /\[\[(.*?)\](?:\[(.*?)\])?\]/g;
-        let lastIndex = 0;
-        let match;
+			const src = match[1];
+			const desc = match[2];
 
-        while ((match = linkRegex.exec(text)) !== null) {
-            if (match.index > lastIndex) {
-                nodes.push(...this.parseRawUrls(text.substring(lastIndex, match.index)));
-            }
+			// Check if image
+			if (this.isImage(src)) {
+				nodes.push({
+					type: "image",
+					src: src,
+					alt: desc,
+				} as OrgImageNode);
+			} else {
+				nodes.push({
+					type: "link",
+					src: src,
+					description: desc || src,
+				} as OrgLinkNode);
+			}
 
-            const src = match[1];
-            const desc = match[2];
+			lastIndex = linkRegex.lastIndex;
+		}
 
-            // Check if image
-            if (this.isImage(src)) {
-                nodes.push({
-                    type: 'image',
-                    src: src,
-                    alt: desc
-                } as OrgImageNode);
-            } else {
-                nodes.push({
-                    type: 'link',
-                    src: src,
-                    description: desc || src
-                } as OrgLinkNode);
-            }
+		if (lastIndex < text.length) {
+			nodes.push(...this.parseRawUrls(text.substring(lastIndex)));
+		}
 
-            lastIndex = linkRegex.lastIndex;
-        }
+		return nodes;
+	}
 
-        if (lastIndex < text.length) {
-            nodes.push(...this.parseRawUrls(text.substring(lastIndex)));
-        }
+	private parseRawUrls(text: string): OrgNode[] {
+		const nodes: OrgNode[] = [];
+		// Regex to match URLs.
+		// We match http/https followed by non-whitespace characters.
+		// We exclude common trailing punctuation that might be part of the sentence but not the URL.
+		const urlRegex = /https?:\/\/[^\s]+(?<![.,;)])/g;
 
-        return nodes;
-    }
+		let lastIndex = 0;
+		let match;
 
-    private parseRawUrls(text: string): OrgNode[] {
-        const nodes: OrgNode[] = [];
-        // Regex to match URLs. 
-        // We match http/https followed by non-whitespace characters.
-        // We exclude common trailing punctuation that might be part of the sentence but not the URL.
-        const urlRegex = /https?:\/\/[^\s]+(?<![.,;)])/g;
+		while ((match = urlRegex.exec(text)) !== null) {
+			if (match.index > lastIndex) {
+				nodes.push({
+					type: "text",
+					content: text.substring(lastIndex, match.index),
+				});
+			}
 
-        let lastIndex = 0;
-        let match;
+			const url = match[0];
+			nodes.push({
+				type: "link",
+				src: url,
+				description: url,
+			} as OrgLinkNode);
 
-        while ((match = urlRegex.exec(text)) !== null) {
-            if (match.index > lastIndex) {
-                nodes.push({ type: 'text', content: text.substring(lastIndex, match.index) });
-            }
+			lastIndex = urlRegex.lastIndex;
+		}
 
-            const url = match[0];
-            nodes.push({
-                type: 'link',
-                src: url,
-                description: url
-            } as OrgLinkNode);
+		if (lastIndex < text.length) {
+			nodes.push({ type: "text", content: text.substring(lastIndex) });
+		}
 
-            lastIndex = urlRegex.lastIndex;
-        }
+		return nodes;
+	}
 
-        if (lastIndex < text.length) {
-            nodes.push({ type: 'text', content: text.substring(lastIndex) });
-        }
+	private isImage(src: string): boolean {
+		return /\.(png|jpg|jpeg|gif|svg|webp)$/i.test(src);
+	}
 
-        return nodes;
-    }
+	private parseHeadingContent(rawTitle: string): {
+		todoKeyword?: string;
+		priority?: string;
+		title: string;
+		tags?: string[];
+	} {
+		let title = rawTitle;
+		let todoKeyword: string | undefined;
+		let priority: string | undefined;
+		let tags: string[] | undefined;
 
-    private isImage(src: string): boolean {
-        return /\.(png|jpg|jpeg|gif|svg|webp)$/i.test(src);
-    }
+		// 1. Parse TODO Keyword
+		const words = title.split(/\s+/);
+		if (words.length > 0) {
+			const firstWord = words[0];
+			if (this.isTodoKeyword(firstWord)) {
+				todoKeyword = firstWord;
+				title = words.slice(1).join(" ");
+			}
+		}
 
-    private parseHeadingContent(rawTitle: string): { todoKeyword?: string, priority?: string, title: string, tags?: string[] } {
-        let title = rawTitle;
-        let todoKeyword: string | undefined;
-        let priority: string | undefined;
-        let tags: string[] | undefined;
+		// 2. Parse Priority [\#A]
+		const priorityMatch = title.match(/^\[#([A-Z])\]\s+(.*)/);
+		if (priorityMatch) {
+			priority = priorityMatch[1];
+			title = priorityMatch[2];
+		}
 
-        // 1. Parse TODO Keyword
-        const words = title.split(/\s+/);
-        if (words.length > 0) {
-            const firstWord = words[0];
-            if (this.isTodoKeyword(firstWord)) {
-                todoKeyword = firstWord;
-                title = words.slice(1).join(' ');
-            }
-        }
+		// 3. Parse Tags :tag1:tag2:
+		const tagsMatch = title.match(/(.*?)\s+:([a-zA-Z0-9_@%:]+):\s*$/);
+		if (tagsMatch) {
+			title = tagsMatch[1];
+			tags = tagsMatch[2].split(":").filter((t) => t !== "");
+		}
 
-        // 2. Parse Priority [\#A]
-        const priorityMatch = title.match(/^\[#([A-Z])\]\s+(.*)/);
-        if (priorityMatch) {
-            priority = priorityMatch[1];
-            title = priorityMatch[2];
-        }
+		return { todoKeyword, priority, title, tags };
+	}
 
-        // 3. Parse Tags :tag1:tag2:
-        const tagsMatch = title.match(/(.*?)\s+:([a-zA-Z0-9_@%:]+):\s*$/);
-        if (tagsMatch) {
-            title = tagsMatch[1];
-            tags = tagsMatch[2].split(':').filter(t => t !== '');
-        }
-
-        return { todoKeyword, priority, title, tags };
-    }
-
-    private isTodoKeyword(word: string): boolean {
-        const cleanWord = word.replace(/\(.\)$/, ''); // Remove access key like TODO(t)
-        for (const sequence of this.todoKeywords) {
-            for (const keyword of sequence) {
-                if (keyword === '|') continue;
-                const cleanKeyword = keyword.replace(/\(.\)$/, '').replace('(!)', '').replace('(@)', '');
-                // Simple check for now, can be improved to handle complex config
-                if (cleanKeyword === cleanWord) return true;
-            }
-        }
-        return false;
-    }
+	private isTodoKeyword(word: string): boolean {
+		const cleanWord = word.replace(/\(.\)$/, ""); // Remove access key like TODO(t)
+		for (const sequence of this.todoKeywords) {
+			for (const keyword of sequence) {
+				if (keyword === "|") continue;
+				const cleanKeyword = keyword
+					.replace(/\(.\)$/, "")
+					.replace("(!)", "")
+					.replace("(@)", "");
+				// Simple check for now, can be improved to handle complex config
+				if (cleanKeyword === cleanWord) return true;
+			}
+		}
+		return false;
+	}
 }

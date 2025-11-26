@@ -1,23 +1,23 @@
 {
-    "name": "@orgdrop/domain",
-    "version": "0.0.0",
-    "type": "module",
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "exports": {
-        ".": {
-            "types": "./dist/index.d.ts",
-            "import": "./dist/index.js",
-            "require": "./dist/index.js"
-        }
-    },
-    "scripts": {
-        "build": "tsc",
-        "dev": "tsc -w",
-        "test": "vitest run"
-    },
-    "devDependencies": {
-        "typescript": "~5.9.3",
-        "vitest": "^4.0.13"
-    }
+	"name": "@orgdrop/domain",
+	"version": "0.0.0",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"require": "./dist/index.js"
+		}
+	},
+	"scripts": {
+		"build": "tsc",
+		"dev": "tsc -w",
+		"test": "vitest run"
+	},
+	"devDependencies": {
+		"typescript": "~5.9.3",
+		"vitest": "^4.0.13"
+	}
 }
