@@ -37,11 +37,24 @@ export const OrgViewer: React.FC<OrgViewerProps> = ({ file, resolveImage, onLink
         });
     };
 
-    // Optimized visibility check
+    // Optimized visibility check and indentation calculation
     const getVisibleNodes = () => {
+        let currentHeadingLevel = 0;
+
         return file.nodes.map((node, index) => {
             let hidden = false;
+            let indentLevel = 0;
 
+            if (node.type === 'heading') {
+                const heading = node as OrgHeadingNode;
+                currentHeadingLevel = heading.level;
+                indentLevel = Math.max(0, heading.level - 1);
+            } else {
+                // Content inherits indentation from the current heading
+                indentLevel = currentHeadingLevel;
+            }
+
+            // Visibility check (same as before)
             let currentLevel = Infinity;
             if (node.type === 'heading') {
                 currentLevel = (node as OrgHeadingNode).level;
@@ -62,7 +75,7 @@ export const OrgViewer: React.FC<OrgViewerProps> = ({ file, resolveImage, onLink
                 }
             }
 
-            return { node, index, hidden };
+            return { node, index, hidden, indentLevel };
         });
     };
 
@@ -87,7 +100,7 @@ export const OrgViewer: React.FC<OrgViewerProps> = ({ file, resolveImage, onLink
             {Object.keys(otherMetadata).length > 0 && (
                 <PropertiesViewer properties={otherMetadata} />
             )}
-            {visibleNodes.map(({ node, index, hidden }) => {
+            {visibleNodes.map(({ node, index, hidden, indentLevel }) => {
                 if (hidden) return null;
 
                 if (node.type === 'heading') {
@@ -99,11 +112,12 @@ export const OrgViewer: React.FC<OrgViewerProps> = ({ file, resolveImage, onLink
                             collapsed={collapsedIndices.has(index)}
                             onToggle={() => toggleCollapse(index)}
                             onLinkClick={onLinkClick}
+                            indentLevel={indentLevel}
                         />
                     );
                 }
 
-                return <NodeRenderer key={index} node={node} resolveImage={resolveImage} onLinkClick={onLinkClick} />;
+                return <NodeRenderer key={index} node={node} resolveImage={resolveImage} onLinkClick={onLinkClick} indentLevel={indentLevel} />;
             })}
         </div>
     );
@@ -133,27 +147,46 @@ interface NodeRendererProps {
     collapsed?: boolean;
     onToggle?: () => void;
     onLinkClick?: (href: string) => void;
+    indentLevel?: number;
 }
 
-const NodeRenderer: React.FC<NodeRendererProps> = ({ node, resolveImage, collapsed, onToggle, onLinkClick }) => {
-    switch (node.type) {
-        case 'heading':
-            return <HeadingRenderer node={node as OrgHeadingNode} resolveImage={resolveImage} collapsed={collapsed} onToggle={onToggle} onLinkClick={onLinkClick} />;
-        case 'paragraph':
-            return <p className="mb-4 text-gray-800 leading-relaxed"><InlineRenderer nodes={node.children || []} resolveImage={resolveImage} onLinkClick={onLinkClick} /></p>;
-        case 'list':
-            return <ListRenderer node={node as OrgListNode} resolveImage={resolveImage} onLinkClick={onLinkClick} />;
-        case 'block':
-            return (
-                <Suspense fallback={<div className="p-4 bg-gray-100 rounded animate-pulse">Loading code...</div>}>
-                    <BlockRenderer node={node as OrgBlockNode} />
-                </Suspense>
-            );
-        case 'table':
-            return <TableRenderer node={node as OrgTableNode} resolveImage={resolveImage} onLinkClick={onLinkClick} />;
-        default:
-            return null;
-    }
+const NodeRenderer: React.FC<NodeRendererProps> = ({ node, resolveImage, collapsed, onToggle, onLinkClick, indentLevel = 0 }) => {
+    const indentGuides = Array.from({ length: indentLevel }).map((_, i) => (
+        <div
+            key={i}
+            className="w-5 flex-shrink-0"
+        />
+    ));
+
+    const renderContent = () => {
+        switch (node.type) {
+            case 'heading':
+                return <HeadingRenderer node={node as OrgHeadingNode} resolveImage={resolveImage} collapsed={collapsed} onToggle={onToggle} onLinkClick={onLinkClick} />;
+            case 'paragraph':
+                return <p className="mb-4 text-gray-800 leading-relaxed"><InlineRenderer nodes={node.children || []} resolveImage={resolveImage} onLinkClick={onLinkClick} /></p>;
+            case 'list':
+                return <ListRenderer node={node as OrgListNode} resolveImage={resolveImage} onLinkClick={onLinkClick} />;
+            case 'block':
+                return (
+                    <Suspense fallback={<div className="p-4 bg-gray-100 rounded animate-pulse">Loading code...</div>}>
+                        <BlockRenderer node={node as OrgBlockNode} />
+                    </Suspense>
+                );
+            case 'table':
+                return <TableRenderer node={node as OrgTableNode} resolveImage={resolveImage} onLinkClick={onLinkClick} />;
+            default:
+                return null;
+        }
+    };
+
+    return (
+        <div className="flex">
+            {indentGuides}
+            <div className="flex-1 min-w-0">
+                {renderContent()}
+            </div>
+        </div>
+    );
 };
 
 interface HeadingRendererProps {
@@ -166,18 +199,19 @@ interface HeadingRendererProps {
 
 const HeadingRenderer: React.FC<HeadingRendererProps> = ({ node, resolveImage, collapsed, onToggle, onLinkClick }) => {
     const Tag = `h${Math.min(node.level, 6)}` as React.ElementType;
+    // Adjusted sizes for cleaner look in indent mode
     const sizeClasses = {
-        1: 'text-3xl border-b pb-2 mt-8 mb-4',
-        2: 'text-2xl mt-6 mb-3',
-        3: 'text-xl mt-4 mb-2',
-        4: 'text-lg mt-3 mb-2',
-        5: 'text-base font-bold mt-2 mb-1',
-        6: 'text-sm font-bold mt-2 mb-1',
+        1: 'text-2xl font-bold mt-6 mb-3 border-b pb-1',
+        2: 'text-xl font-bold mt-4 mb-2',
+        3: 'text-lg font-bold mt-3 mb-2',
+        4: 'text-base font-bold mt-2 mb-1',
+        5: 'text-sm font-bold mt-2 mb-1',
+        6: 'text-xs font-bold mt-2 mb-1',
     }[Math.min(node.level, 6)];
 
     return (
         <div className="group" id={node.properties?.['ID'] || node.properties?.['CUSTOM_ID']} data-title={node.title}>
-            <Tag className={`font-bold text-gray-900 ${sizeClasses} flex items-center`}>
+            <Tag className={`text-gray-900 ${sizeClasses} flex items-center`}>
                 {node.todoKeyword && (
                     <span className={`mr-2 px-2 py-0.5 rounded text-sm text-white ${node.todoKeyword === 'TODO' ? 'bg-red-500' :
                         node.todoKeyword === 'DONE' ? 'bg-green-500' :
@@ -208,7 +242,7 @@ const HeadingRenderer: React.FC<HeadingRendererProps> = ({ node, resolveImage, c
             </Tag>
             {/* Show properties only if not collapsed */}
             {!collapsed && node.properties && Object.keys(node.properties).length > 0 && (
-                <div className="ml-8 mb-2">
+                <div className="mb-2">
                     <PropertiesViewer properties={node.properties} />
                 </div>
             )}

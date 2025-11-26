@@ -102,49 +102,70 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ items, onItemClick }) =>
         !importantItems.includes(i) && !nextActionItems.includes(i) && !shoppingItems.includes(i) && !inboxItems.includes(i)
     );
 
-    const renderItem = (item: AgendaItem, showFile = true) => (
-        <li key={item.heading.title + Math.random()} className="flex items-start group cursor-pointer hover:bg-gray-50 p-1 rounded" onClick={() => onItemClick(item.file)}>
-            {showFile && <span className="text-xs font-mono text-gray-400 mt-1 w-20 flex-shrink-0 truncate mr-2">{getCategory(item)}</span>}
-            <div className="flex-1">
-                <div className="flex items-center flex-wrap">
-                    {item.heading.todoKeyword && (
-                        <span className={`text-xs font-bold mr-2 px-1 rounded ${item.heading.todoKeyword === 'TODO' ? 'bg-red-100 text-red-700' :
-                            item.heading.todoKeyword === 'NEXT' ? 'bg-blue-100 text-blue-700' :
-                                item.heading.todoKeyword === 'WAITING' ? 'bg-yellow-100 text-yellow-700' :
-                                    'bg-gray-100 text-gray-700'
-                            }`}>
-                            {item.heading.todoKeyword}
-                        </span>
-                    )}
-                    {item.heading.priority && (
-                        <span className="text-yellow-600 font-mono text-sm mr-1 font-bold">[#{item.heading.priority}]</span>
-                    )}
-                    <span className="text-gray-900 font-medium mr-2">
-                        <InlineRenderer nodes={item.heading.children} />
-                    </span>
-                    {item.heading.tags && item.heading.tags.length > 0 && (
-                        <span className="text-xs text-gray-400 mr-2">
-                            {item.heading.tags.map(tag => `:${tag}:`).join('')}
-                        </span>
-                    )}
+    const renderItem = (item: AgendaItem, showFile = true) => {
+        // Level 1 is top level, so we want 0 indentation for it.
+        // But usually in Org mode * is level 1.
+        // Let's say we want to show indentation for level > 1.
+        // Or maybe we just show indentation corresponding to (level - 1).
+        const indentLevel = Math.max(0, item.heading.level - 1);
+        const indentGuides = Array.from({ length: indentLevel }).map((_, i) => (
+            <div
+                key={i}
+                className="w-5 flex-shrink-0"
+            />
+        ));
+
+        return (
+            <li key={item.heading.title + Math.random()} className="flex items-stretch group cursor-pointer hover:bg-gray-50 p-0 rounded overflow-hidden" onClick={() => onItemClick(item.file)}>
+
+                <div className="flex-1 flex items-start p-1">
+                    {showFile && <span className="text-xs font-mono text-gray-400 mt-1 w-20 flex-shrink-0 truncate mr-2">{getCategory(item)}</span>}
+
+                    {/* Indentation Guides */}
+                    {indentGuides}
+
+                    <div className="flex-1">
+                        <div className="flex items-center flex-wrap">
+                            {item.heading.todoKeyword && (
+                                <span className={`text-xs font-bold mr-2 px-1 rounded ${item.heading.todoKeyword === 'TODO' ? 'bg-red-100 text-red-700' :
+                                    item.heading.todoKeyword === 'NEXT' ? 'bg-blue-100 text-blue-700' :
+                                        item.heading.todoKeyword === 'WAITING' ? 'bg-yellow-100 text-yellow-700' :
+                                            'bg-gray-100 text-gray-700'
+                                    }`}>
+                                    {item.heading.todoKeyword}
+                                </span>
+                            )}
+                            {item.heading.priority && (
+                                <span className="text-yellow-600 font-mono text-sm mr-1 font-bold">[#{item.heading.priority}]</span>
+                            )}
+                            <span className="text-gray-900 font-medium mr-2">
+                                <InlineRenderer nodes={item.heading.children} />
+                            </span>
+                            {item.heading.tags && item.heading.tags.length > 0 && (
+                                <span className="text-xs text-gray-400 mr-2">
+                                    {item.heading.tags.map(tag => `:${tag}:`).join('')}
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex space-x-4 text-xs text-gray-500 font-mono">
+                            {item.heading.scheduled && (
+                                <span className="flex items-center text-green-600">
+                                    <span className="mr-1">SCH:</span>
+                                    {item.heading.scheduled}
+                                </span>
+                            )}
+                            {item.heading.deadline && (
+                                <span className="flex items-center text-red-600">
+                                    <span className="mr-1">DL:</span>
+                                    {item.heading.deadline}
+                                </span>
+                            )}
+                        </div>
+                    </div>
                 </div>
-                <div className="flex space-x-4 text-xs text-gray-500 font-mono">
-                    {item.heading.scheduled && (
-                        <span className="flex items-center text-green-600">
-                            <span className="mr-1">SCH:</span>
-                            {item.heading.scheduled}
-                        </span>
-                    )}
-                    {item.heading.deadline && (
-                        <span className="flex items-center text-red-600">
-                            <span className="mr-1">DL:</span>
-                            {item.heading.deadline}
-                        </span>
-                    )}
-                </div>
-            </div>
-        </li>
-    );
+            </li>
+        );
+    };
 
     return (
         <div className="max-w-4xl mx-auto p-6 bg-white shadow-sm min-h-screen">
