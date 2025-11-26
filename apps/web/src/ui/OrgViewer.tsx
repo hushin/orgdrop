@@ -125,7 +125,7 @@ export const OrgViewer: React.FC<OrgViewerProps> = ({ file, resolveImage, onLink
 
 const PropertiesViewer: React.FC<{ properties: Record<string, any> }> = ({ properties }) => {
     return (
-        <details className="mb-4 bg-gray-50 rounded border border-gray-200">
+        <details className="mb-1 bg-gray-50 rounded border border-gray-200">
             <summary className="px-3 py-2 text-xs font-mono text-gray-500 cursor-pointer hover:bg-gray-100 select-none">
                 :PROPERTIES:
             </summary>
@@ -154,7 +154,7 @@ const NodeRenderer: React.FC<NodeRendererProps> = ({ node, resolveImage, collaps
     const indentGuides = Array.from({ length: indentLevel }).map((_, i) => (
         <div
             key={i}
-            className="w-5 flex-shrink-0"
+            className="w-4 flex-shrink-0"
         />
     ));
 
