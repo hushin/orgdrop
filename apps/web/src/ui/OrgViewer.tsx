@@ -235,7 +235,7 @@ const HeadingRenderer: React.FC<HeadingRendererProps> = ({ node, resolveImage, c
                 />
                 <span
                     onClick={onToggle}
-                    className="ml-4 cursor-pointer text-gray-400 hover:text-gray-600 select-none w-6 inline-block text-center flex-shrink-0"
+                    className="ml-4 cursor-pointer text-gray-300 hover:text-gray-600 select-none w-6 inline-block text-center flex-shrink-0"
                 >
                     {collapsed ? '▲' : '▼'}
                 </span>
