@@ -100,7 +100,7 @@ npx wrangler kv namespace create DROPBOX_CACHE
 npx wrangler kv namespace create DROPBOX_CACHE --env production
 ```
 
-Update `apps/web/wrangler.jsonc` with the `id` and `preview_id` (if applicable) from the output.
+Update `apps/worker/wrangler.jsonc` with the `id` and `preview_id` (if applicable) from the output.
 
 ### 2. Environment Variables
 

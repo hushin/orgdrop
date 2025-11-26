@@ -4,8 +4,8 @@
 	"scripts": {
 		"dev": "pnpm --parallel -r dev",
 		"build": "pnpm -r build",
-		"deploy": "npx wrangler deploy --config apps/web/wrangler.jsonc",
-		"upload-version": "npx wrangler versions upload --config apps/web/wrangler.jsonc",
+		"deploy": "npx wrangler deploy --config apps/worker/wrangler.jsonc",
+		"upload-version": "npx wrangler versions upload --config apps/worker/wrangler.jsonc",
 		"lint": "pnpm -r lint",
 		"format": "biome format --write .",
 		"check": "biome check --write ."

@@ -223,7 +223,7 @@ export class OrgParser {
 					const isPrevLineEmpty = prevLine !== null && prevLine.trim() === "";
 
 					if (lastNode && lastNode.type === "paragraph" && !isPrevLineEmpty) {
-						lastNode.content += "\n" + line;
+						lastNode.content = (lastNode.content || "") + "\n" + line;
 						lastNode.children = this.parseInline(lastNode.content);
 					} else {
 						nodes.push({

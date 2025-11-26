@@ -29,7 +29,7 @@ function App() {
 	useEffect(() => {
 		const handleMouseMove = (e: MouseEvent) => {
 			if (!isResizing) return;
-			setSidebarWidth((prev) => {
+			setSidebarWidth(() => {
 				const newWidth = e.clientX;
 				if (newWidth < 150) return 150;
 				if (newWidth > 600) return 600;
