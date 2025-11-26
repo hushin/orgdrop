@@ -201,12 +201,12 @@ const HeadingRenderer: React.FC<HeadingRendererProps> = ({ node, resolveImage, c
     const Tag = `h${Math.min(node.level, 6)}` as React.ElementType;
     // Adjusted sizes for cleaner look in indent mode
     const sizeClasses = {
-        1: 'text-2xl font-bold mt-6 mb-3 border-b pb-1',
-        2: 'text-xl font-bold mt-4 mb-2',
-        3: 'text-lg font-bold mt-3 mb-2',
-        4: 'text-base font-bold mt-2 mb-1',
-        5: 'text-sm font-bold mt-2 mb-1',
-        6: 'text-xs font-bold mt-2 mb-1',
+        1: 'text-2xl font-bold mt-4 mb-2 border-b border-gray-300 pb-1 leading-tight',
+        2: 'text-xl font-bold mt-2 mb-1 leading-tight',
+        3: 'text-lg font-bold mt-1.5 mb-1 leading-tight',
+        4: 'text-base font-bold mt-1 mb-0.5 leading-tight',
+        5: 'text-sm font-bold mt-1 mb-0.5 leading-tight',
+        6: 'text-xs font-bold mt-1 mb-0.5 leading-tight',
     }[Math.min(node.level, 6)];
 
     return (
