@@ -14,9 +14,37 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(256);
+  const [isResizing, setIsResizing] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      setSidebarWidth((prev) => {
+        const newWidth = e.clientX;
+        if (newWidth < 150) return 150;
+        if (newWidth > 600) return 600;
+        return newWidth;
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
 
   const repository = useMemo(() => new RemoteFileRepository(''), []);
   const searchFiles = useMemo(() => new SearchFilesUseCase(repository), [repository]);
@@ -99,19 +127,29 @@ function App() {
   return (
     <div className="flex h-screen bg-gray-100 overflow-hidden">
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-gray-800 text-white transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0`}>
-        <Sidebar
-          files={files}
-          onFileSelect={(path) => {
-            navigate(`/file/${path.split('/').map(encodeURIComponent).join('/')}`);
-            setIsSidebarOpen(false);
-          }}
-          currentFile={currentFile}
-          viewMode={viewMode}
-          onAgendaSelect={() => {
-            navigate('/agenda');
-            setIsSidebarOpen(false);
-          }}
+      <div 
+        className={`fixed inset-y-0 left-0 z-30 bg-gray-800 text-white transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 flex`}
+        style={{ width: sidebarWidth }}
+      >
+        <div className="flex-1 overflow-hidden">
+          <Sidebar
+            files={files}
+            onFileSelect={(path) => {
+              navigate(`/file/${path.split('/').map(encodeURIComponent).join('/')}`);
+              setIsSidebarOpen(false);
+            }}
+            currentFile={currentFile}
+            viewMode={viewMode}
+            onAgendaSelect={() => {
+              navigate('/agenda');
+              setIsSidebarOpen(false);
+            }}
+          />
+        </div>
+        {/* Resizer */}
+        <div
+          className="w-4 hover:bg-blue-500 cursor-col-resize transition-colors"
+          onMouseDown={() => setIsResizing(true)}
         />
       </div>
 
