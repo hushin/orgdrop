@@ -10,6 +10,8 @@ import type {
 	OrgTableNode,
 	OrgTableRowNode,
 	OrgTableCellNode,
+	OrgCodeNode,
+	OrgVerbatimNode,
 } from "./ast";
 
 export class OrgParser {
@@ -254,9 +256,7 @@ export class OrgParser {
 
 		while ((match = linkRegex.exec(text)) !== null) {
 			if (match.index > lastIndex) {
-				nodes.push(
-					...this.parseRawUrls(text.substring(lastIndex, match.index)),
-				);
+				nodes.push(...this.parseCode(text.substring(lastIndex, match.index)));
 			}
 
 			const src = match[1];
@@ -278,6 +278,62 @@ export class OrgParser {
 			}
 
 			lastIndex = linkRegex.lastIndex;
+		}
+
+		if (lastIndex < text.length) {
+			nodes.push(...this.parseCode(text.substring(lastIndex)));
+		}
+
+		return nodes;
+	}
+
+	private parseCode(text: string): OrgNode[] {
+		const nodes: OrgNode[] = [];
+		const codeRegex = /~([^~\n]+)~/g;
+		let lastIndex = 0;
+		let match;
+
+		while ((match = codeRegex.exec(text)) !== null) {
+			if (match.index > lastIndex) {
+				nodes.push(
+					...this.parseVerbatim(text.substring(lastIndex, match.index)),
+				);
+			}
+
+			nodes.push({
+				type: "code",
+				value: match[1],
+			} as OrgCodeNode);
+
+			lastIndex = codeRegex.lastIndex;
+		}
+
+		if (lastIndex < text.length) {
+			nodes.push(...this.parseVerbatim(text.substring(lastIndex)));
+		}
+
+		return nodes;
+	}
+
+	private parseVerbatim(text: string): OrgNode[] {
+		const nodes: OrgNode[] = [];
+		const verbatimRegex = /=([^=\n]+)=/g;
+		let lastIndex = 0;
+		let match;
+
+		while ((match = verbatimRegex.exec(text)) !== null) {
+			if (match.index > lastIndex) {
+				nodes.push(
+					...this.parseRawUrls(text.substring(lastIndex, match.index)),
+				);
+			}
+
+			nodes.push({
+				type: "verbatim",
+				value: match[1],
+			} as OrgVerbatimNode);
+
+			lastIndex = verbatimRegex.lastIndex;
 		}
 
 		if (lastIndex < text.length) {

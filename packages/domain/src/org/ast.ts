@@ -10,7 +10,9 @@ export type OrgNodeType =
 	| "block"
 	| "table"
 	| "table_row"
-	| "table_cell";
+	| "table_cell"
+	| "code"
+	| "verbatim";
 
 export interface OrgNode {
 	type: OrgNodeType;
@@ -75,6 +77,16 @@ export interface OrgTableRowNode extends OrgNode {
 export interface OrgTableCellNode extends OrgNode {
 	type: "table_cell";
 	children: OrgNode[];
+}
+
+export interface OrgCodeNode extends OrgNode {
+	type: "code";
+	value: string;
+}
+
+export interface OrgVerbatimNode extends OrgNode {
+	type: "verbatim";
+	value: string;
 }
 
 export interface OrgFile {

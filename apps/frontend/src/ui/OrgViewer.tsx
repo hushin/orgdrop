@@ -5,11 +5,11 @@ import type {
 	OrgHeadingNode,
 	OrgListNode,
 	OrgListItemNode,
-	OrgLinkNode,
-	OrgImageNode,
 	OrgBlockNode,
 	OrgTableNode,
 } from "@orgdrop/domain";
+
+import { InlineRenderer } from "./InlineRenderer";
 
 const BlockRenderer = React.lazy(() => import("./BlockRenderer"));
 
@@ -389,54 +389,6 @@ const ListItemRenderer: React.FC<{
 				onLinkClick={onLinkClick}
 			/>
 		</li>
-	);
-};
-
-const InlineRenderer: React.FC<{
-	nodes: OrgNode[];
-	resolveImage?: (src: string) => string;
-	onLinkClick?: (href: string) => void;
-}> = ({ nodes, resolveImage, onLinkClick }) => {
-	return (
-		<>
-			{nodes.map((node, index) => {
-				if (node.type === "text")
-					return <span key={index}>{node.content}</span>;
-				if (node.type === "link") {
-					const linkNode = node as OrgLinkNode;
-					return (
-						<a
-							key={index}
-							href={linkNode.src}
-							className="text-blue-600 hover:underline"
-							onClick={(e) => {
-								if (onLinkClick) {
-									e.preventDefault();
-									onLinkClick(linkNode.src);
-								}
-							}}
-							target={onLinkClick ? undefined : "_blank"}
-							rel={onLinkClick ? undefined : "noopener noreferrer"}
-						>
-							{linkNode.description}
-						</a>
-					);
-				}
-				if (node.type === "image") {
-					const imgNode = node as OrgImageNode;
-					const src = resolveImage ? resolveImage(imgNode.src) : imgNode.src;
-					return (
-						<img
-							key={index}
-							src={src}
-							alt={imgNode.alt}
-							className="max-w-full h-auto my-2 rounded shadow"
-						/>
-					);
-				}
-				return null;
-			})}
-		</>
 	);
 };
 

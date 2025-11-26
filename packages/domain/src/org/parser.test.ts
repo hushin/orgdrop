@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { OrgParser } from "./parser";
-import { OrgHeadingNode, OrgBlockNode } from "./ast";
+import {
+	OrgHeadingNode,
+	OrgBlockNode,
+	OrgCodeNode,
+	OrgVerbatimNode,
+} from "./ast";
 
 describe("OrgParser Extension", () => {
 	const parser = new OrgParser();
@@ -214,5 +219,76 @@ Text
 		expect(textNode).toBeDefined();
 		expect(textNode.type).toBe("paragraph");
 		expect(textNode.content).toBe("Text");
+	});
+});
+
+describe("OrgParser Inline Formatting", () => {
+	const parser = new OrgParser();
+
+	it("should parse inline code", () => {
+		const text = "This is ~code~.";
+		const result = parser.parse(text);
+		const paragraph = result.nodes[0];
+		expect(paragraph.children).toHaveLength(3);
+		expect(paragraph.children![0]).toEqual({
+			type: "text",
+			content: "This is ",
+		});
+		expect(paragraph.children![1]).toEqual({ type: "code", value: "code" });
+		expect(paragraph.children![2]).toEqual({ type: "text", content: "." });
+	});
+
+	it("should parse inline verbatim", () => {
+		const text = "This is =verbatim=.";
+		const result = parser.parse(text);
+		const paragraph = result.nodes[0];
+		expect(paragraph.children).toHaveLength(3);
+		expect(paragraph.children![0]).toEqual({
+			type: "text",
+			content: "This is ",
+		});
+		expect(paragraph.children![1]).toEqual({
+			type: "verbatim",
+			value: "verbatim",
+		});
+		expect(paragraph.children![2]).toEqual({ type: "text", content: "." });
+	});
+
+	it("should parse mixed inline formatting", () => {
+		const text =
+			"Check ~code~ and =verbatim= and [[https://example.com][link]].";
+		const result = parser.parse(text);
+		const paragraph = result.nodes[0];
+
+		expect(paragraph.children).toHaveLength(7);
+		expect(paragraph.children![1]).toEqual({ type: "code", value: "code" });
+		expect(paragraph.children![3]).toEqual({
+			type: "verbatim",
+			value: "verbatim",
+		});
+		expect(paragraph.children![5].type).toBe("link");
+	});
+
+	it("should prioritize code over verbatim if nested", () => {
+		const text = "~code =verbatim=~";
+		const result = parser.parse(text);
+		const paragraph = result.nodes[0];
+		expect(paragraph.children).toHaveLength(1);
+		expect(paragraph.children![0]).toEqual({
+			type: "code",
+			value: "code =verbatim=",
+		});
+	});
+
+	it("should handle code inside text with URLs", () => {
+		const text = "Click ~http://example.com~";
+		const result = parser.parse(text);
+		const paragraph = result.nodes[0];
+		expect(paragraph.children).toHaveLength(2);
+		expect(paragraph.children![0]).toEqual({ type: "text", content: "Click " });
+		expect(paragraph.children![1]).toEqual({
+			type: "code",
+			value: "http://example.com",
+		});
 	});
 });
