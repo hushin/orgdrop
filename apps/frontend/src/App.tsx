@@ -58,7 +58,7 @@ function App() {
 		[repository],
 	);
 
-	const handleAuthError = (e: any) => {
+	const handleAuthError = (e: unknown) => {
 		console.error(e);
 		setIsAuthenticated(false);
 		setIsLoading(false);
@@ -70,7 +70,7 @@ function App() {
 				const fileList = await repository.getFiles();
 				setFiles(fileList);
 				setIsAuthenticated(true);
-			} catch (e: any) {
+			} catch (e: unknown) {
 				handleAuthError(e);
 			} finally {
 				setIsLoading(false);

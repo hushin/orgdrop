@@ -38,6 +38,7 @@ export const OrgViewer: React.FC<OrgViewerProps> = ({
 				}
 			}
 		});
+		// eslint-disable-next-line react-hooks/set-state-in-effect
 		setCollapsedIndices(newCollapsedIndices);
 	}, [file]);
 
@@ -155,7 +156,7 @@ export const OrgViewer: React.FC<OrgViewerProps> = ({
 	);
 };
 
-const PropertiesViewer: React.FC<{ properties: Record<string, any> }> = ({
+const PropertiesViewer: React.FC<{ properties: Record<string, unknown> }> = ({
 	properties,
 }) => {
 	return (

@@ -37,9 +37,9 @@ export function FilePage({ repository }: FilePageProps) {
 				const decodedPath = decodeURIComponent(path);
 				const parsed = await repository.readFile(decodedPath);
 				setParsedFile(parsed);
-			} catch (e: any) {
+			} catch (e: unknown) {
 				console.error("Failed to load file", e);
-				setError(e.message || "Failed to load file");
+				setError((e as Error).message || "Failed to load file");
 			} finally {
 				setIsLoading(false);
 			}

@@ -127,10 +127,10 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
 			!inboxItems.includes(i),
 	);
 
-	const renderItem = (item: AgendaItem, showFile = true) => {
+	const renderItem = (item: AgendaItem, showFile = true, index?: number) => {
 		return (
 			<li
-				key={item.heading.title + Math.random()}
+				key={`${item.file}-${item.heading.title}-${index ?? 0}`}
 				className="flex items-stretch group cursor-pointer hover:bg-gray-50 p-0 rounded overflow-hidden"
 				onClick={() => onItemClick(item.file)}
 			>
@@ -202,7 +202,9 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
 					<h3 className="text-lg font-bold mb-2 text-blue-700 border-b border-blue-200 pb-1">
 						NEXT
 					</h3>
-					<ul className="space-y-1">{nextItems.map((i) => renderItem(i))}</ul>
+					<ul className="space-y-1">
+						{nextItems.map((i, idx) => renderItem(i, true, idx))}
+					</ul>
 				</div>
 			)}
 
@@ -218,7 +220,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
 								Overdue
 							</h4>
 							<ul className="space-y-1">
-								{overdueItems.map((i) => renderItem(i))}
+								{overdueItems.map((i, idx) => renderItem(i, true, idx))}
 							</ul>
 						</div>
 					)}
@@ -228,7 +230,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
 								Reschedule
 							</h4>
 							<ul className="space-y-1">
-								{rescheduleItems.map((i) => renderItem(i))}
+								{rescheduleItems.map((i, idx) => renderItem(i, true, idx))}
 							</ul>
 						</div>
 					)}
@@ -238,7 +240,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
 								Today
 							</h4>
 							<ul className="space-y-1">
-								{todayDueItems.map((i) => renderItem(i))}
+								{todayDueItems.map((i, idx) => renderItem(i, true, idx))}
 							</ul>
 						</div>
 					)}
@@ -266,7 +268,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
 										})}
 									</h4>
 									<ul className="space-y-1">
-										{dayItems.map((i) => renderItem(i))}
+										{dayItems.map((i, idx) => renderItem(i, true, idx))}
 									</ul>
 								</div>
 							),
@@ -284,7 +286,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
 						WAITING
 					</h3>
 					<ul className="space-y-1">
-						{waitingItems.map((i) => renderItem(i))}
+						{waitingItems.map((i, idx) => renderItem(i, true, idx))}
 					</ul>
 				</div>
 			)}
@@ -301,7 +303,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
 								Important
 							</h4>
 							<ul className="space-y-1">
-								{importantItems.map((i) => renderItem(i))}
+								{importantItems.map((i, idx) => renderItem(i, true, idx))}
 							</ul>
 						</div>
 					)}
@@ -311,7 +313,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
 								Next Action
 							</h4>
 							<ul className="space-y-1">
-								{nextActionItems.map((i) => renderItem(i))}
+								{nextActionItems.map((i, idx) => renderItem(i, true, idx))}
 							</ul>
 						</div>
 					)}
@@ -321,7 +323,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
 								Shopping
 							</h4>
 							<ul className="space-y-1">
-								{shoppingItems.map((i) => renderItem(i))}
+								{shoppingItems.map((i, idx) => renderItem(i, true, idx))}
 							</ul>
 						</div>
 					)}
@@ -331,7 +333,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
 								Inbox
 							</h4>
 							<ul className="space-y-1">
-								{inboxItems.map((i) => renderItem(i))}
+								{inboxItems.map((i, idx) => renderItem(i, true, idx))}
 							</ul>
 						</div>
 					)}
@@ -341,7 +343,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
 								Others
 							</h4>
 							<ul className="space-y-1">
-								{otherItems.map((i) => renderItem(i))}
+								{otherItems.map((i, idx) => renderItem(i, true, idx))}
 							</ul>
 						</div>
 					)}
