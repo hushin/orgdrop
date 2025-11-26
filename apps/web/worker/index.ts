@@ -31,7 +31,7 @@ app.get('/api/files', async (c) => {
     try {
         const client = new DropboxClient(token);
         const files = await client.listFiles(rootPath === '/' ? '' : rootPath);
-        return c.json(files);
+        return c.json(files.map(f => f.path));
     } catch (e: any) {
         return c.text(e.message, 500);
     }
@@ -77,17 +77,18 @@ app.get('/api/search', async (c) => {
 
         // 3. Search in content
         // Process in batches to avoid rate limits
-        const BATCH_SIZE = 10;
+        const BATCH_SIZE = 50;
         const results: any[] = [];
 
         // Filter files (exclude .git)
-        const searchFiles = allFiles.filter(file => !file.includes('/.git/'));
+        const searchFiles = allFiles.filter(file => !file.path.includes('/.git/'));
+        console.log(`[Search] Searching ${searchFiles.length} files...`);
 
         for (let i = 0; i < searchFiles.length; i += BATCH_SIZE) {
             const batch = searchFiles.slice(i, i + BATCH_SIZE);
-            const batchResults = await Promise.all(batch.map(async (filePath) => {
+            const batchResults = await Promise.all(batch.map(async (file) => {
                 try {
-                    const { content } = await fileCache.getFile(filePath);
+                    const { content } = await fileCache.getFile(file.path, file.rev);
                     const lines = content.split(/\r?\n/);
                     const lineMatches = lines
                         .map((line, index) => ({ line, index }))
@@ -102,13 +103,13 @@ app.get('/api/search', async (c) => {
 
                     if (lineMatches.length > 0) {
                         return {
-                            filePath: filePath,
+                            filePath: file.path,
                             matches: lineMatches
                         };
                     }
                     return null;
                 } catch (e) {
-                    console.error(`Failed to search in file ${filePath}`, e);
+                    console.error(`Failed to search in file ${file.path}`, e);
                     return null;
                 }
             }));
@@ -116,7 +117,7 @@ app.get('/api/search', async (c) => {
 
             // Small delay between batches
             if (i + BATCH_SIZE < searchFiles.length) {
-                await new Promise(resolve => setTimeout(resolve, 100));
+                await new Promise(resolve => setTimeout(resolve, 20));
             }
         }
 
@@ -210,7 +211,10 @@ app.get('/api/agenda', async (c) => {
         const files = await client.listFiles(rootPath === '/' ? '' : rootPath);
 
         // 3. Filter files
-        const agendaFiles = filterFiles(files, { rootPath, config });
+        const agendaFiles = filterFiles(files.map(f => f.path), { rootPath, config });
+
+        // Create a map for quick rev lookup
+        const fileRevs = new Map(files.map(f => [f.path, f.rev]));
 
         // 4. Fetch and Parse
         const parser = new OrgParser();
@@ -218,7 +222,8 @@ app.get('/api/agenda', async (c) => {
 
         await Promise.all(agendaFiles.map(async (file) => {
             try {
-                const { content, rev } = await fileCache.getFile(file);
+                const rev = fileRevs.get(file);
+                const { content, rev: fetchedRev } = await fileCache.getFile(file, rev);
 
                 const dropboxPath = file.startsWith('/') ? file : `/${file}`;
                 const agendaCacheKey = `agenda:${tokenHash}:${dropboxPath}`;
@@ -226,7 +231,7 @@ app.get('/api/agenda', async (c) => {
                 // Check Agenda Cache
                 const cachedAgenda = await c.env.DROPBOX_CACHE.get(agendaCacheKey, { type: 'json' }) as { rev: string, items: AgendaItem[] } | null;
 
-                if (cachedAgenda && cachedAgenda.rev === rev) {
+                if (cachedAgenda && cachedAgenda.rev === fetchedRev) {
                     items.push(...cachedAgenda.items);
                 } else {
                     // Parse and Cache
@@ -234,7 +239,7 @@ app.get('/api/agenda', async (c) => {
                     const fileItems: AgendaItem[] = [];
                     extractTasks(orgFile.nodes, file, fileItems);
 
-                    c.executionCtx.waitUntil(c.env.DROPBOX_CACHE.put(agendaCacheKey, JSON.stringify({ rev, items: fileItems })));
+                    c.executionCtx.waitUntil(c.env.DROPBOX_CACHE.put(agendaCacheKey, JSON.stringify({ rev: fetchedRev, items: fileItems })));
                     items.push(...fileItems);
                 }
             } catch (e) {

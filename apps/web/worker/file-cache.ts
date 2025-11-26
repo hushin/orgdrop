@@ -19,7 +19,7 @@ export class FileCache {
         this.tokenHash = tokenHash;
     }
 
-    async getFile(path: string): Promise<{ content: string; rev: string }> {
+    async getFile(path: string, knownRev?: string): Promise<{ content: string; rev: string }> {
         const dropboxPath = path.startsWith('/') ? path : `/${path}`;
         const key = `${this.tokenHash}:${dropboxPath}`;
 
@@ -28,7 +28,15 @@ export class FileCache {
         if (cached) {
             // SWR: Return cached, revalidate in background
             console.log(`[FileCache] Cache Hit (SWR) for ${dropboxPath}`);
-            this.ctx.waitUntil(this.revalidate(dropboxPath, cached.rev));
+
+            if (knownRev) {
+                if (cached.rev !== knownRev) {
+                    console.log(`[FileCache] Stale (cached: ${cached.rev}, known: ${knownRev})`);
+                    this.ctx.waitUntil(this.updateCache(dropboxPath));
+                }
+            } else {
+                this.ctx.waitUntil(this.revalidate(dropboxPath, cached.rev));
+            }
             return cached;
         }
 
@@ -44,14 +52,22 @@ export class FileCache {
             const metadata = await this.client.getMetadata(path);
             if (metadata.rev !== cachedRev) {
                 console.log(`[FileCache] Updating ${path} (cached: ${cachedRev}, current: ${metadata.rev})`);
-                const { content, rev } = await this.client.downloadFile(path);
-                const key = `${this.tokenHash}:${path}`;
-                await this.kv.put(key, JSON.stringify({ rev, content }));
+                await this.updateCache(path);
             } else {
                 console.log(`[FileCache] Cache Fresh for ${path}`);
             }
         } catch (e) {
             console.error(`[FileCache] Revalidation failed for ${path}`, e);
+        }
+    }
+
+    private async updateCache(path: string) {
+        try {
+            const { content, rev } = await this.client.downloadFile(path);
+            const key = `${this.tokenHash}:${path}`;
+            await this.kv.put(key, JSON.stringify({ rev, content }));
+        } catch (e) {
+            console.error(`[FileCache] Update failed for ${path}`, e);
         }
     }
 }

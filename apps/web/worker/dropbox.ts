@@ -5,7 +5,7 @@ export class DropboxClient {
         this.accessToken = accessToken;
     }
 
-    async listFiles(path: string = ''): Promise<string[]> {
+    async listFiles(path: string = ''): Promise<{ path: string; rev: string }[]> {
         let allEntries: any[] = [];
         let hasMore = true;
         let cursor: string | null = null;
@@ -57,7 +57,10 @@ export class DropboxClient {
 
                 return isFile && isOrg && !isHidden;
             })
-            .map((entry: any) => entry.path_display);
+            .map((entry: any) => ({
+                path: entry.path_display,
+                rev: entry.rev
+            }));
 
         return files;
     }
