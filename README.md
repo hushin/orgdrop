@@ -52,7 +52,7 @@ OrgDrop is a modern, web-based Org-mode viewer that seamlessly integrates with D
 ### Configuration
 
 1.  **Backend (Cloudflare Worker)**:
-    -   Create a `.dev.vars` file in the `apps/web/` directory.
+    -   Create a `.dev.vars` file in the `apps/worker/` directory.
     -   Add your Dropbox App credentials:
         ```
         DROPBOX_APP_KEY=your_app_key
@@ -123,14 +123,14 @@ In your Dropbox App Console:
 Deploy both the Frontend and Backend as a single Cloudflare Worker.
 
 ```bash
-cd apps/web
+# From root
 pnpm run build
 pnpm run deploy
 ```
 
 This command will:
-1.  Build the Frontend (Vite) to `apps/web/dist`.
-2.  Deploy the Worker, serving the static assets from `dist` and executing the API logic.
+1.  Build the Frontend (Vite) to `apps/frontend/dist`.
+2.  Deploy the Worker from `apps/worker`, serving the static assets from `../frontend/dist` and executing the API logic.
 
 **Note:** Ensure you have set the environment variables (secrets) in Cloudflare Dashboard or using `wrangler secret put`.
 
