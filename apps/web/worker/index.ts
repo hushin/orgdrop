@@ -320,6 +320,10 @@ app.get('/auth/callback', async (c) => {
 
         // Redirect back to frontend
         // Redirect back to root
+        const url = new URL(c.req.url);
+        if (url.hostname === 'localhost' && url.port === '8737') {
+            return c.redirect('http://localhost:5173/');
+        }
         return c.redirect('/');
     } catch (e) {
         return c.text(`Auth Error: ${e}`, 500);
