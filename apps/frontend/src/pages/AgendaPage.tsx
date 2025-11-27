@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import type { AgendaItem } from "@orgdrop/domain";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import type { RemoteFileRepository } from "../repository/RemoteFileRepository";
 import { AgendaView } from "../ui/AgendaView";
 import { GetAgendaUseCase } from "../usecase/GetAgenda";
-import type { AgendaItem } from "@orgdrop/domain";
-import type { RemoteFileRepository } from "../repository/RemoteFileRepository";
 
 interface AgendaPageProps {
 	repository: RemoteFileRepository;

@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { AgendaView } from "./AgendaView";
 import type { AgendaItem } from "@orgdrop/domain";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { AgendaView } from "./AgendaView";
 
 // Mock Agenda Items
 const today = new Date();

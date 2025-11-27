@@ -1,8 +1,6 @@
+import type { AppConfig, OrgFile, SearchResult } from "@orgdrop/domain";
+import { type AgendaItem, OrgParser } from "@orgdrop/domain";
 import type { FileRepository } from "./FileRepository";
-import type { OrgFile } from "@orgdrop/domain";
-import type { SearchResult } from "@orgdrop/domain";
-import type { AppConfig } from "@orgdrop/domain";
-import { OrgParser, type AgendaItem } from "@orgdrop/domain";
 
 const DUMMY_FILES: Record<string, string> = {
 	"example.org": `

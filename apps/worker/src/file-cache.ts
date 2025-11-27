@@ -1,5 +1,5 @@
 /// <reference types="@cloudflare/workers-types" />
-import { DropboxClient } from "./dropbox";
+import type { DropboxClient } from "./dropbox";
 
 export class FileCache {
 	private client: DropboxClient;

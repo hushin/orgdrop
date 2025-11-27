@@ -1,11 +1,11 @@
-import type { FileRepository } from "./FileRepository";
 import type {
-	OrgFile,
 	AgendaItem,
-	SearchResult,
 	AppConfig,
+	OrgFile,
+	SearchResult,
 } from "@orgdrop/domain";
 import { OrgParser } from "@orgdrop/domain";
+import type { FileRepository } from "./FileRepository";
 
 export class RemoteFileRepository implements FileRepository {
 	private parser: OrgParser;

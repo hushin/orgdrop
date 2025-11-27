@@ -1,6 +1,9 @@
-import type { OrgFile, AgendaItem } from "@orgdrop/domain";
-import type { SearchResult } from "@orgdrop/domain";
-import type { AppConfig } from "@orgdrop/domain";
+import type {
+	AgendaItem,
+	AppConfig,
+	OrgFile,
+	SearchResult,
+} from "@orgdrop/domain";
 
 export interface FileRepository {
 	getFiles(): Promise<string[]>;

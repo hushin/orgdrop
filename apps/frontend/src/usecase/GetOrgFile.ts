@@ -1,5 +1,5 @@
-import type { FileRepository } from "../repository/FileRepository";
 import type { OrgFile } from "@orgdrop/domain";
+import type { FileRepository } from "../repository/FileRepository";
 
 export class GetOrgFileUseCase {
 	private fileRepository: FileRepository;

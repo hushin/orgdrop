@@ -1,13 +1,13 @@
-import React, { useState, useEffect, Suspense } from "react";
 import type {
-	OrgFile,
-	OrgNode,
-	OrgHeadingNode,
-	OrgListNode,
-	OrgListItemNode,
 	OrgBlockNode,
+	OrgFile,
+	OrgHeadingNode,
+	OrgListItemNode,
+	OrgListNode,
+	OrgNode,
 	OrgTableNode,
 } from "@orgdrop/domain";
+import React, { Suspense, useEffect, useState } from "react";
 
 import { InlineRenderer } from "./InlineRenderer";
 
@@ -373,6 +373,12 @@ const ListItemRenderer: React.FC<{
 	resolveImage?: (src: string) => string;
 	onLinkClick?: (href: string) => void;
 }> = ({ node, resolveImage, onLinkClick }) => {
+	// Separate inline content from nested lists
+	const inlineNodes =
+		node.children?.filter((child) => child.type !== "list") || [];
+	const nestedLists =
+		node.children?.filter((child) => child.type === "list") || [];
+
 	return (
 		<li className="mb-1">
 			{node.checked !== undefined && (
@@ -384,10 +390,18 @@ const ListItemRenderer: React.FC<{
 				/>
 			)}
 			<InlineRenderer
-				nodes={node.children || []}
+				nodes={inlineNodes}
 				resolveImage={resolveImage}
 				onLinkClick={onLinkClick}
 			/>
+			{nestedLists.map((nestedList, index) => (
+				<ListRenderer
+					key={index}
+					node={nestedList as OrgListNode}
+					resolveImage={resolveImage}
+					onLinkClick={onLinkClick}
+				/>
+			))}
 		</li>
 	);
 };

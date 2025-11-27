@@ -1,16 +1,16 @@
 import type {
-	OrgNode,
+	OrgBlockNode,
+	OrgCodeNode,
 	OrgFile,
 	OrgHeadingNode,
-	OrgListNode,
-	OrgListItemNode,
-	OrgLinkNode,
 	OrgImageNode,
-	OrgBlockNode,
+	OrgLinkNode,
+	OrgListItemNode,
+	OrgListNode,
+	OrgNode,
+	OrgTableCellNode,
 	OrgTableNode,
 	OrgTableRowNode,
-	OrgTableCellNode,
-	OrgCodeNode,
 	OrgVerbatimNode,
 } from "./ast";
 
@@ -30,6 +30,7 @@ export class OrgParser {
 		const lines = text.split(/\r?\n/);
 		const nodes: OrgNode[] = [];
 		let currentList: OrgListNode | null = null;
+		let listStack: OrgListNode[] = [];
 		const metadata: Record<string, any> = {};
 		let inPropertiesDrawer = false;
 		let currentBlock: OrgBlockNode | null = null;
@@ -54,6 +55,7 @@ export class OrgParser {
 			const blockStartMatch = line.match(/^#\+BEGIN_([A-Z0-9_]+)(?:\s+(.*))?/i);
 			if (blockStartMatch) {
 				currentList = null; // Break list
+				listStack = [];
 				currentBlock = {
 					type: "block",
 					name: blockStartMatch[1].toUpperCase(),
@@ -109,6 +111,7 @@ export class OrgParser {
 
 			if (headingMatch) {
 				currentList = null; // Break list on heading
+				listStack = [];
 				const level = headingMatch[1].length;
 				const rawTitle = headingMatch[2];
 				const { todoKeyword, priority, title, tags } =
@@ -146,12 +149,9 @@ export class OrgParser {
 					children: this.parseInline(content),
 				};
 
-				// Simple list handling: if currentList exists and matches type/indent, append.
-				// Otherwise create new list.
-				// Note: This is a simplified list parser. Nested lists need more complex stack logic.
-				// For now, let's just group consecutive list items.
-
-				if (!currentList || currentList.ordered !== ordered) {
+				// Nested list handling using stack
+				if (!currentList) {
+					// Start a new top-level list
 					currentList = {
 						type: "list",
 						ordered,
@@ -159,11 +159,84 @@ export class OrgParser {
 						children: [listItem],
 					};
 					nodes.push(currentList);
+					listStack = [currentList];
+				} else if (indent > listStack[listStack.length - 1].indent) {
+					// This is a nested list - create new list as child of last item
+					const parentList = listStack[listStack.length - 1];
+					const lastItem = parentList.children![
+						parentList.children!.length - 1
+					] as OrgListItemNode;
+					const nestedList: OrgListNode = {
+						type: "list",
+						ordered,
+						indent,
+						children: [listItem],
+					};
+					// Append nested list to last item's children
+					if (!lastItem.children) {
+						lastItem.children = [];
+					}
+					lastItem.children.push(nestedList);
+					listStack.push(nestedList);
+					currentList = nestedList;
+				} else if (indent < listStack[listStack.length - 1].indent) {
+					// Going back up - find the appropriate parent list
+					while (
+						listStack.length > 1 &&
+						listStack[listStack.length - 1].indent > indent
+					) {
+						listStack.pop();
+					}
+					currentList = listStack[listStack.length - 1];
+					// If indent matches, add to this list; otherwise start new
+					if (
+						currentList.indent === indent &&
+						currentList.ordered === ordered
+					) {
+						currentList.children?.push(listItem);
+					} else {
+						// Different type or indent - start new top-level list
+						currentList = {
+							type: "list",
+							ordered,
+							indent,
+							children: [listItem],
+						};
+						nodes.push(currentList);
+						listStack = [currentList];
+					}
 				} else {
-					currentList.children?.push(listItem);
+					// Same indent - add to current list if same type
+					if (currentList.ordered === ordered) {
+						currentList.children?.push(listItem);
+					} else {
+						// Different type - start new list at same level
+						listStack.pop();
+						const newList: OrgListNode = {
+							type: "list",
+							ordered,
+							indent,
+							children: [listItem],
+						};
+						if (listStack.length > 0) {
+							const parentList = listStack[listStack.length - 1];
+							const lastItem = parentList.children![
+								parentList.children!.length - 1
+							] as OrgListItemNode;
+							if (!lastItem.children) {
+								lastItem.children = [];
+							}
+							lastItem.children.push(newList);
+						} else {
+							nodes.push(newList);
+						}
+						listStack.push(newList);
+						currentList = newList;
+					}
 				}
 			} else if (tableRowMatch) {
 				currentList = null; // Break list
+				listStack = [];
 
 				// Check if separator
 				// Separator usually looks like |---+---| or |---|
@@ -195,6 +268,7 @@ export class OrgParser {
 				currentTable.children.push(row);
 			} else {
 				currentList = null; // Break list on non-list line
+				listStack = [];
 				currentTable = null; // Break table on non-table line
 
 				// Check for planning line (SCHEDULED/DEADLINE)

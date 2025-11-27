@@ -1,11 +1,11 @@
-import { describe, it, expect } from "vitest";
-import { OrgParser } from "./parser";
+import { describe, expect, it } from "vitest";
 import {
-	OrgHeadingNode,
-	OrgBlockNode,
+	type OrgBlockNode,
 	OrgCodeNode,
+	type OrgHeadingNode,
 	OrgVerbatimNode,
 } from "./ast";
+import { OrgParser } from "./parser";
 
 describe("OrgParser Extension", () => {
 	const parser = new OrgParser();
@@ -290,5 +290,110 @@ describe("OrgParser Inline Formatting", () => {
 			type: "code",
 			value: "http://example.com",
 		});
+	});
+});
+
+describe("OrgParser Nested Lists", () => {
+	const parser = new OrgParser();
+
+	it("should parse nested unordered lists", () => {
+		const text = `- Item 1
+  - Nested 1
+  - Nested 2
+- Item 2`;
+		const result = parser.parse(text);
+
+		expect(result.nodes).toHaveLength(1);
+		const list = result.nodes[0] as any;
+		expect(list.type).toBe("list");
+		expect(list.ordered).toBe(false);
+		expect(list.children).toHaveLength(2);
+
+		// Item 1 should have nested list in children
+		const item1 = list.children[0];
+		expect(item1.type).toBe("list_item");
+		// Item 1 children: [text node, nested list]
+		expect(item1.children.length).toBeGreaterThanOrEqual(2);
+		const nestedList = item1.children.find((c: any) => c.type === "list");
+		expect(nestedList).toBeDefined();
+		expect(nestedList.children).toHaveLength(2);
+		expect(nestedList.children[0].type).toBe("list_item");
+
+		// Item 2 should not have nested list
+		const item2 = list.children[1];
+		expect(item2.type).toBe("list_item");
+	});
+
+	it("should parse deeply nested lists", () => {
+		const text = `- Level 1
+  - Level 2
+    - Level 3`;
+		const result = parser.parse(text);
+
+		const list = result.nodes[0] as any;
+		expect(list.type).toBe("list");
+
+		const level1Item = list.children[0];
+		const level2List = level1Item.children.find((c: any) => c.type === "list");
+		expect(level2List).toBeDefined();
+
+		const level2Item = level2List.children[0];
+		const level3List = level2Item.children.find((c: any) => c.type === "list");
+		expect(level3List).toBeDefined();
+		expect(level3List.children[0].type).toBe("list_item");
+	});
+
+	it("should parse nested ordered lists", () => {
+		const text = `1. First
+   1. Sub first
+   2. Sub second
+2. Second`;
+		const result = parser.parse(text);
+
+		const list = result.nodes[0] as any;
+		expect(list.type).toBe("list");
+		expect(list.ordered).toBe(true);
+		expect(list.children).toHaveLength(2);
+
+		const item1 = list.children[0];
+		const nestedList = item1.children.find((c: any) => c.type === "list");
+		expect(nestedList).toBeDefined();
+		expect(nestedList.ordered).toBe(true);
+		expect(nestedList.children).toHaveLength(2);
+	});
+
+	it("should parse mixed ordered and unordered nested lists", () => {
+		const text = `- Unordered
+  1. Ordered nested
+  2. Ordered nested 2
+- Unordered 2`;
+		const result = parser.parse(text);
+
+		const list = result.nodes[0] as any;
+		expect(list.ordered).toBe(false);
+
+		const item1 = list.children[0];
+		const nestedList = item1.children.find((c: any) => c.type === "list");
+		expect(nestedList).toBeDefined();
+		expect(nestedList.ordered).toBe(true);
+	});
+
+	it("should handle returning to parent level", () => {
+		const text = `- Item 1
+  - Nested
+- Item 2
+  - Nested 2`;
+		const result = parser.parse(text);
+
+		const list = result.nodes[0] as any;
+		expect(list.children).toHaveLength(2);
+
+		const item1 = list.children[0];
+		const nested1 = item1.children.find((c: any) => c.type === "list");
+		expect(nested1.children).toHaveLength(1);
+
+		const item2 = list.children[1];
+		const nested2 = item2.children.find((c: any) => c.type === "list");
+		expect(nested2.children).toHaveLength(1);
 	});
 });

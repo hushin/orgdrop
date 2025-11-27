@@ -1,5 +1,5 @@
-import type { FileRepository } from "../repository/FileRepository";
 import type { AgendaItem } from "@orgdrop/domain";
+import type { FileRepository } from "../repository/FileRepository";
 
 export class GetAgendaUseCase {
 	private fileRepository: FileRepository;

@@ -1,11 +1,11 @@
-import React from "react";
 import type {
-	OrgNode,
-	OrgLinkNode,
 	OrgCodeNode,
-	OrgVerbatimNode,
 	OrgImageNode,
+	OrgLinkNode,
+	OrgNode,
+	OrgVerbatimNode,
 } from "@orgdrop/domain";
+import type React from "react";
 
 interface InlineRendererProps {
 	nodes?: OrgNode[];

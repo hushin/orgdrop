@@ -1,18 +1,18 @@
-import { useState, useEffect, useMemo } from "react";
-import {
-	Routes,
-	Route,
-	Navigate,
-	useNavigate,
-	useLocation,
-} from "react-router-dom";
-import { Sidebar } from "./ui/Sidebar";
-import { RemoteFileRepository } from "./repository/RemoteFileRepository";
-import { SearchBox, SearchResults } from "./ui/Search";
-import { SearchFilesUseCase } from "./usecase/SearchFiles";
 import type { SearchResult } from "@orgdrop/domain";
+import { useEffect, useMemo, useState } from "react";
+import {
+	Navigate,
+	Route,
+	Routes,
+	useLocation,
+	useNavigate,
+} from "react-router-dom";
 import { AgendaPage } from "./pages/AgendaPage";
 import { FilePage } from "./pages/FilePage";
+import { RemoteFileRepository } from "./repository/RemoteFileRepository";
+import { SearchBox, SearchResults } from "./ui/Search";
+import { Sidebar } from "./ui/Sidebar";
+import { SearchFilesUseCase } from "./usecase/SearchFiles";
 
 function App() {
 	const [files, setFiles] = useState<string[]>([]);

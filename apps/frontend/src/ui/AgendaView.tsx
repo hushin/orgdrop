@@ -1,5 +1,5 @@
-import React from "react";
 import type { AgendaItem } from "@orgdrop/domain";
+import type React from "react";
 import { InlineRenderer } from "./InlineRenderer";
 
 interface AgendaViewProps {

@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
 import type { OrgFile } from "@orgdrop/domain";
-import { OrgViewer } from "../ui/OrgViewer";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { RemoteFileRepository } from "../repository/RemoteFileRepository";
+import { OrgViewer } from "../ui/OrgViewer";
 
 interface FilePageProps {
 	repository: RemoteFileRepository;
