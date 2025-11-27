@@ -35,7 +35,7 @@ OrgDrop is a modern, web-based Org-mode viewer that seamlessly integrates with D
 
 1.  Clone the repository:
     ```bash
-    git clone https://github.com/hushin-sandbox/orgdrop.git
+    git clone https://github.com/hushin/orgdrop.git
     cd orgdrop
     ```
 
@@ -46,7 +46,7 @@ OrgDrop is a modern, web-based Org-mode viewer that seamlessly integrates with D
 
 3.  Build shared packages:
     ```bash
-    pnpm -r run build
+    pnpm run build
     ```
 
 ### Configuration
