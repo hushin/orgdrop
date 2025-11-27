@@ -7,6 +7,7 @@ interface SidebarProps {
 	currentFile: string;
 	viewMode: "file" | "agenda";
 	onAgendaSelect: () => void;
+	onLogout: () => void;
 }
 
 interface FileNode {
@@ -205,62 +206,86 @@ export const Sidebar = ({
 	currentFile,
 	viewMode,
 	onAgendaSelect,
+	onLogout,
 }: SidebarProps) => {
 	const fileTree = useMemo(() => buildFileTree(files), [files]);
 
 	return (
-		<div className="p-4 h-full bg-gray-800 text-white overflow-y-auto">
-			<h1 className="text-xl font-bold mb-6">OrgDrop</h1>
-			<nav className="space-y-2">
-				<div className="mb-4">
-					<h2 className="text-xs uppercase text-gray-400 font-semibold mb-2">
-						Views
-					</h2>
-					<Link
-						to="/agenda"
-						onClick={onAgendaSelect}
-						className={`w-full text-left px-4 py-2 rounded flex items-center ${
-							viewMode === "agenda" ? "bg-gray-700" : "hover:bg-gray-700"
-						}`}
-					>
-						<svg
-							className="w-4 h-4 mr-2 text-gray-500"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
+		<div className="p-4 h-full bg-gray-800 text-white overflow-y-auto flex flex-col">
+			<div className="flex-1">
+				<h1 className="text-xl font-bold mb-6">OrgDrop</h1>
+				<nav className="space-y-2">
+					<div className="mb-4">
+						<h2 className="text-xs uppercase text-gray-400 font-semibold mb-2">
+							Views
+						</h2>
+						<Link
+							to="/agenda"
+							onClick={onAgendaSelect}
+							className={`w-full text-left px-4 py-2 rounded flex items-center ${
+								viewMode === "agenda" ? "bg-gray-700" : "hover:bg-gray-700"
+							}`}
 						>
-							<path
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								strokeWidth={2}
-								d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-							/>
-						</svg>
-						Agenda
-					</Link>
-				</div>
-
-				<div>
-					<h2 className="text-xs uppercase text-gray-400 font-semibold mb-2">
-						Files
-					</h2>
-					{files.length === 0 ? (
-						<div className="px-4 text-sm text-gray-500">No files found</div>
-					) : (
-						<div className="mt-2">
-							{fileTree.map((node) => (
-								<FileTreeItem
-									key={node.path}
-									node={node}
-									level={0}
-									onSelect={onFileSelect}
-									currentFile={currentFile}
+							<svg
+								className="w-4 h-4 mr-2 text-gray-500"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
 								/>
-							))}
-						</div>
-					)}
-				</div>
-			</nav>
+							</svg>
+							Agenda
+						</Link>
+					</div>
+
+					<div>
+						<h2 className="text-xs uppercase text-gray-400 font-semibold mb-2">
+							Files
+						</h2>
+						{files.length === 0 ? (
+							<div className="px-4 text-sm text-gray-500">No files found</div>
+						) : (
+							<div className="mt-2">
+								{fileTree.map((node) => (
+									<FileTreeItem
+										key={node.path}
+										node={node}
+										level={0}
+										onSelect={onFileSelect}
+										currentFile={currentFile}
+									/>
+								))}
+							</div>
+						)}
+					</div>
+				</nav>
+			</div>
+			<div className="pt-4 border-t border-gray-700">
+				<button
+					onClick={onLogout}
+					className="w-full text-left px-4 py-2 rounded flex items-center hover:bg-gray-700 text-red-400 hover:text-red-300"
+				>
+					<svg
+						className="w-4 h-4 mr-2"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							strokeLinecap="round"
+							strokeLinejoin="round"
+							strokeWidth={2}
+							d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+						/>
+					</svg>
+					Logout
+				</button>
+			</div>
 		</div>
 	);
 };

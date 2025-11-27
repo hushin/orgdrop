@@ -93,6 +93,10 @@ function App() {
 		setSearchResults([]); // Clear search results
 	};
 
+	const handleLogout = () => {
+		window.location.href = "/auth/logout";
+	};
+
 	// Derive view state from URL for Sidebar
 	const currentPath = location.pathname;
 	const viewMode = currentPath.startsWith("/agenda") ? "agenda" : "file";
@@ -155,6 +159,7 @@ function App() {
 							navigate("/agenda");
 							setIsSidebarOpen(false);
 						}}
+						onLogout={handleLogout}
 					/>
 				</div>
 				{/* Resizer */}

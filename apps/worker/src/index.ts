@@ -6,7 +6,7 @@ import {
 	OrgParser,
 } from "@orgdrop/domain";
 import { Hono } from "hono";
-import { getCookie, setCookie } from "hono/cookie";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { DropboxClient } from "./dropbox";
 import { FileCache } from "./file-cache";
 import { hashToken } from "./utils";
@@ -326,6 +326,11 @@ app.get("/auth/dropbox", (c) => {
 	const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}`;
 
 	return c.redirect(authUrl);
+});
+
+app.get("/auth/logout", (c) => {
+	deleteCookie(c, "dropbox_token");
+	return c.redirect("/");
 });
 
 app.get("/auth/callback", async (c) => {
